@@ -8,13 +8,15 @@ import { Progress } from './screens/Progress'
 import { Settings } from './screens/Settings'
 import { Onboarding } from './screens/Onboarding'
 import { SessionView } from './screens/SessionView'
-import { IProgress, ISettings, IToday, IWeek } from './components/Icons'
+import { Coach } from './screens/Coach'
+import { IProgress, ISettings, ISpark, IToday, IWeek } from './components/Icons'
 
-type Tab = 'hoy' | 'semana' | 'progreso' | 'ajustes'
+type Tab = 'hoy' | 'semana' | 'coach' | 'progreso' | 'ajustes'
 
 const TABS: { id: Tab; label: string; icon: () => React.JSX.Element }[] = [
   { id: 'hoy', label: 'Hoy', icon: IToday },
   { id: 'semana', label: 'Semana', icon: IWeek },
+  { id: 'coach', label: 'Coach', icon: ISpark },
   { id: 'progreso', label: 'Progreso', icon: IProgress },
   { id: 'ajustes', label: 'Ajustes', icon: ISettings },
 ]
@@ -24,6 +26,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('hoy')
   const [open, setOpen] = useState<string | null>(null)
   const [atGym, setAtGym] = useState(false)
+  const [draft, setDraft] = useState<string | undefined>()
 
   // Replanifica al abrir y cada vez que vuelves a la app (o cambia el día)
   useEffect(() => {
@@ -82,9 +85,10 @@ export default function App() {
 
   return (
     <>
-      <main className="app">
-        {tab === 'hoy' && <Today open={setOpen} goWeek={() => setTab('semana')} atGym={atGym} />}
+      <main className={`app ${tab === 'coach' ? 'app-coach' : ''}`}>
+        {tab === 'hoy' && <Today open={setOpen} goWeek={() => setTab('semana')} atGym={atGym} ask={(q) => (setDraft(q), setTab('coach'))} />}
         {tab === 'semana' && <Week open={setOpen} />}
+        {tab === 'coach' && <Coach draft={draft} clearDraft={() => setDraft(undefined)} />}
         {tab === 'progreso' && <Progress />}
         {tab === 'ajustes' && <Settings />}
       </main>

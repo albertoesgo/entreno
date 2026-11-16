@@ -12,7 +12,7 @@ PWA personal para organizar **basket, gimnasio y carrera** en una sola semana, c
 | Stack | React 19 + TypeScript + Vite · `vite-plugin-pwa` (service worker de Workbox) |
 | Funciona sin conexión | Sí. Todo el código queda cacheado tras la primera visita |
 | Servidor / backend | Ninguno. Es una web estática en GitHub Pages |
-| IA | Ninguna. La planificación es un motor de reglas determinista (mismo input → mismo plan) |
+| IA | El plan lo hace un motor de reglas determinista (gratis, sin conexión). Encima, un **coach opcional con Gemini** (tu propia clave gratuita) que conversa y ejecuta cambios en la app (§10) |
 | Publicación | Cada push a `main` → GitHub Action → tests → build → GitHub Pages |
 
 ---
@@ -22,6 +22,7 @@ PWA personal para organizar **basket, gimnasio y carrera** en una sola semana, c
 - **Todo se guarda en el propio dispositivo** (`localStorage`, clave `entreno.v1`). No hay cuentas, servidor, analítica ni cookies de terceros.
 - **Nada sale del móvil.** La app no hace peticiones de red con tus datos; solo descarga su propio código.
 - **Ubicación:** solo se lee si guardas tu gimnasio y activas *Detectar al abrir la app*. Se consulta **una vez al abrir la app** (nunca en segundo plano) y se compara en el propio móvil con la ubicación guardada.
+- **Coach IA (opcional):** solo si lo conectas. La clave de Gemini se guarda aparte (`entreno.gemini.key`), nunca se exporta. Al escribirle, se envía a Google un resumen de tu perfil, la semana actual, las 3 últimas semanas, tus rutinas y tus últimos pesos. En el nivel gratuito Google puede usarlo para mejorar sus modelos.
 - **Copia de seguridad:** *Ajustes → Exportar* descarga un `.json` con todo; *Importar* lo restaura (sirve también para pasar los datos a otro móvil).
 - **Borrar:** *Ajustes → Borrar todo*. Borrar los datos de Safari o desinstalar la app también los borra: exporta de vez en cuando.
 
@@ -71,7 +72,7 @@ Para que el plan sea **estable**, moverse de su día actual cuesta +6: solo camb
 
 ### Tabla de costes (≥ 100 = prohibido)
 
-Base: **+6 por cada sesión** que ya haya ese día · **+100** si ya hay 2 sesiones de gym/carrera · **+25** si ocupar ese día deja la semana **sin ningún día libre**.
+Base: **+100 en tus días bloqueados** (Ajustes → Disponibilidad) · **+6 por cada sesión** que ya haya ese día · **+100** si ya hay 2 sesiones de gym/carrera · **+25** si ocupar ese día deja la semana **sin ningún día libre**.
 
 | Sesión | Penalizaciones principales |
 |---|---|
@@ -96,7 +97,9 @@ El motor también mira el **domingo anterior** y el **lunes siguiente** para no 
 - **Avance:** si la semana anterior cumpliste **≥ 60 %** pasas al siguiente bloque; si no, **se repite el bloque**. Tras la descarga empieza un **ciclo nuevo** (sube el escalón de volumen).
 - **Cumplimiento** = sesiones de gym y carrera del plan hechas ÷ total planificadas (las saltadas cuentan como no hechas; lo que añades a mano y el basket no cuentan).
 - **Vuelta tras un parón** (≥ 2 semanas sin abrir la app): vuelves al bloque 1 en modo suave.
-- **Check-in semanal** (*Hoy*): cansancio 1–5 y peso. Con **4 o 5**, esa semana va en **modo suave**: −1 serie por ejercicio (mín. 2), carreras ×0,85 de duración y menos repeticiones en las series.
+- **Check-in semanal** (*Hoy*): cansancio 1–5 y peso. Con **4 o 5**, esa semana va en **modo suave**: −1 serie por ejercicio (mín. 2), carreras ×0,85 de duración y menos repeticiones en las series. Con **1 (fresco)**, **modo +carga**: +1 serie en los dos primeros ejercicios de fuerza (máx. 5) y carreras ×1,1.
+- **Autorregulación por RPE:** al empezar semana, se mira el RPE medio de las sesiones de gym y carrera de la anterior (mín. 2 valoradas). **≥ 8,7 → modo suave**; **≤ 6,5 con ≥ 90 % de cumplimiento → modo +carga**. No se aplica en la semana de descarga.
+- **Modo manual:** en *Semana* puedes elegir Normal / Suave / + Carga cuando quieras.
 
 ---
 
@@ -115,6 +118,22 @@ El motor también mira el **domingo anterior** y el **lunes siguiente** para no 
 | Pallof press 3 × 10–12 | | |
 
 Con **2 días de gym** se hacen A y B, y B añade curl y tríceps (2 series cada uno).
+
+### Rutinas editables
+
+*Ajustes → Rutinas*: cambia el nombre, añade, quita, reordena o sustituye ejercicios y ajusta series y rango de reps de cada uno. Al guardar, el motor recalcula todas las sesiones futuras.
+
+Dentro de una sesión (menú ⋯ de cada ejercicio) puedes **cambiar** el ejercicio, **quitarlo** o **añadir** otro, eligiendo **solo hoy** (la sesión queda «personalizada» y conserva sus cambios aunque el plan la mueva de día) o **siempre** (se guarda en la rutina). También puedes subir o bajar las series de hoy.
+
+**Biblioteca:** ~55 ejercicios en 14 grupos (pliometría, pierna rodilla/cadera/unilateral, gemelo, pecho, hombro, espalda vertical/remo, bíceps, tríceps, core…). Al cambiar uno, primero salen las **alternativas del mismo grupo**. Puedes **crear ejercicios propios** (nombre, grupo, tipo de carga y rango de reps); el incremento se elige solo según el tipo.
+
+Cada ejercicio guarda su propio historial: si cambias A por B y vuelves a A, A retoma donde lo dejaste.
+
+### Durante la sesión
+
+- **«Última vez»** bajo cada ejercicio: peso y reps de tu último registro.
+- **Cronómetro de descanso** al marcar una serie: 150" si el rango es ≤ 8 reps, 90" en pliometría y ejercicios medios, 60" en aislamiento (hombro, brazos, core). +15" o saltar; aviso con sonido al acabar.
+- Barra de progreso de series.
 
 ### Doble progresión (cómo calcula el peso de hoy)
 
@@ -169,7 +188,26 @@ Con `P = 6:20`: rodaje a 7:25–7:50, 400 m a 6:00, tempo a 6:40, 1 km a 6:15.
 
 ---
 
-## 9. Gimnasio y avisos por ubicación
+## 9. Coach IA (Gemini)
+
+Pestaña *Coach*. Se conecta con tu clave gratuita de Google AI Studio; la app elige sola el mejor modelo **Gemini Flash** disponible para esa clave. Las llamadas van directas del móvil a Google, sin servidor intermedio.
+
+En cada mensaje recibe tu perfil, la semana (con ids de sesiones y ejercicios), las 3 últimas semanas, tus rutinas, tus pesos y la biblioteca de ejercicios. Puede **actuar** con estas herramientas, que usan las mismas funciones que la interfaz (así el motor replanifica igual):
+
+| Herramienta | Qué hace |
+|---|---|
+| `move_session` / `skip_session` | Mover o saltar una sesión de esta semana |
+| `add_event` | Añadir partido, entreno de basket o carrera |
+| `swap_exercise` / `add_exercise` / `remove_exercise` | Editar ejercicios de una sesión, solo hoy o siempre |
+| `set_routine` | Reescribir una rutina completa |
+| `create_exercise` | Crear un ejercicio nuevo |
+| `set_week_mode` | Semana normal, suave o con más carga |
+| `update_profile` | Días de basket, partido, días bloqueados, gym/carreras por semana, objetivo, ritmo 5K |
+| `log_weight` | Registrar peso |
+
+Cada acción aparece como una etiqueta verde bajo la respuesta. Máximo 6 pasos por mensaje. Ante dolor, adapta y recomienda profesional si es agudo o persiste; no diagnostica.
+
+## 10. Gimnasio y avisos por ubicación
 
 - **Guardar gimnasio:** *Ajustes → Mi gimnasio*, estando allí. Radio de 150 m más la imprecisión del GPS (hasta +100 m).
 - **Al abrir la app allí:** abre directamente la rutina de hoy (una vez al día) y muestra el aviso *Estás en el gimnasio*. Si hoy no tocaba gym, ofrece traer a hoy la siguiente sesión de la semana.
@@ -177,16 +215,16 @@ Con `P = 6:20`: rodaje a 7:25–7:50, 400 m a 6:00, tempo a 6:40, 1 km a 6:15.
 
 ---
 
-## 10. Límites conocidos
+## 11. Límites conocidos
 
 - No lee el calendario del iPhone. Los partidos entre semana se añaden a mano (posible v2: calendario público de iCloud + proxy).
 - No sincroniza entre dispositivos. Para pasar los datos, exportar e importar.
 - Al tocar la notificación de Atajos se abre Atajos, no Entreno. Para abrir la app directamente haría falta push con servidor (posible v2).
-- Sin IA. Un coach opcional (resúmenes, cambiar ejercicios) necesitaría un backend que guarde la clave de la API.
+- El coach necesita conexión y depende de los límites del nivel gratuito de Gemini (si se agotan, avisa y vuelve a funcionar al rato).
 
 ---
 
-## 11. Desarrollo
+## 12. Desarrollo
 
 ```bash
 npm install
@@ -201,5 +239,7 @@ npm run icons    # regenerar iconos
 | `src/lib/engine.ts` | Motor: semanas, bloques, colocación, reajustes |
 | `src/lib/program.ts` | Ejercicios, plantillas, progresión de gym y carrera |
 | `src/lib/store.ts` | Estado, persistencia y acciones |
+| `src/lib/coach.ts` | Coach IA: conexión con Gemini, contexto y herramientas |
 | `src/lib/geo.ts` | Distancias y ubicación |
-| `src/screens/*` | Pantallas: Hoy, Semana, Sesión, Progreso, Ajustes, Inicio |
+| `src/screens/*` | Pantallas: Hoy, Semana, Sesión, Coach, Progreso, Ajustes, Editor de rutinas, Inicio |
+| `src/components/Pickers.tsx` | Buscador de ejercicios, creación, selectores |

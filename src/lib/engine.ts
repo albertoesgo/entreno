@@ -1,6 +1,6 @@
 import type { GymTemplate, Kind, Profile, Session, State, Template, WeekMeta } from './types'
 import { addDays, dayName, diffDays, weekStart } from './dates'
-import { GYM, buildGym, buildRun, gymMinutes } from './program'
+import { DEFAULT_TEMPLATES, buildGym, buildRun, gymMinutes, rebuildCustom } from './program'
 
 /**
  * Motor de planificación.
@@ -32,8 +32,8 @@ export function flexNeeded(p: Profile): { kind: Kind; template: Template }[] {
   return [...gym.map((t) => ({ kind: 'gym' as Kind, template: t })), ...runs.map((t) => ({ kind: 'run' as Kind, template: t }))]
 }
 
-export function flexTitle(t: Template): string {
-  if (t === 'A' || t === 'B' || t === 'C') return GYM[t].title
+export function flexTitle(t: Template, state?: Pick<State, 'templates'>): string {
+  if (t === 'A' || t === 'B' || t === 'C') return (state?.templates ?? DEFAULT_TEMPLATES)[t].title
   return { quality: 'Calidad', easy: 'Rodaje suave', long: 'Rodaje largo', free: 'Carrera libre' }[t]
 }
 
@@ -90,6 +90,18 @@ function ensureMeta(state: State, start: string, today: string): WeekMeta {
     } else {
       meta = { start, block: last.block, cycle: last.cycle, changes: [] }
       note(meta, today, `La semana pasada hiciste el ${Math.round((last.compliance ?? 0) * 100)} %: repetimos bloque antes de subir.`)
+    }
+    // Autorregulación: lo duras que te resultaron las sesiones de la semana pasada
+    if (gapWeeks < 2) {
+      const rated = weekSessions(state, lastKey).filter((s) => isFlex(s) && s.status === 'done' && s.rpe)
+      const avg = rated.length ? rated.reduce((a, s) => a + s.rpe!, 0) / rated.length : 0
+      if (rated.length >= 2 && avg >= 8.7 && meta.block !== 4) {
+        meta.reduced = true
+        note(meta, today, `La semana pasada fue muy exigente (RPE medio ${avg.toFixed(1).replace('.', ',')}): esta semana una serie menos y carreras más cortas.`)
+      } else if (rated.length >= 2 && avg <= 6.5 && (last.compliance ?? 0) >= 0.9 && meta.block !== 4) {
+        meta.boost = true
+        note(meta, today, `Vas sobrado (RPE medio ${avg.toFixed(1).replace('.', ',')}): una serie más en los básicos y algo más de carrera.`)
+      }
     }
   }
   state.weeks[start] = meta
@@ -242,13 +254,14 @@ export function sync(state: State, today: string): void {
     for (let d = 0; d < 7; d++) {
       const date = addDays(start, d)
       if (date < today || it.existing?.avoid === date) continue
-      const c = cost(it.template, d, map) + (it.hint && it.hint.date !== date ? 6 : 0)
+      const blocked = p.blockedDays?.includes(d) ? 100 : 0
+      const c = cost(it.template, d, map) + blocked + (it.hint && it.hint.date !== date ? 6 : 0)
       if (c < bestCost) {
         bestCost = c
         best = d
       }
     }
-    const title = it.existing?.title ?? it.hint?.title ?? flexTitle(it.template)
+    const title = it.existing?.title ?? it.hint?.title ?? flexTitle(it.template, state)
     if (best < 0 || bestCost >= 100) {
       if (it.hint) note(meta, today, `${title} sale de esta semana: no hay hueco sin sobrecargar.`)
       else if (it.existing && !it.existing.noRoomNoted) {
@@ -269,10 +282,11 @@ export function sync(state: State, today: string): void {
         date,
         kind: it.kind,
         template: it.template,
-        title: flexTitle(it.template),
+        title: flexTitle(it.template, state),
         status: 'planned',
         minutes: 60,
         ...(it.hint?.movedFrom ? { movedFrom: it.hint.movedFrom } : {}),
+        ...(it.hint?.customized ? { customized: true, exercises: it.hint.exercises } : {}),
       })
     }
   }
@@ -291,16 +305,18 @@ export function refreshTargets(state: State, start: string, meta: WeekMeta) {
   for (const s of wk) {
     if (s.status !== 'planned' || hasLogs(s) || !s.template) continue
     if (s.kind === 'gym' && (s.template === 'A' || s.template === 'B' || s.template === 'C')) {
-      s.exercises = buildGym(state, s.template, {
+      const ctx = {
         date: s.date,
         deload: meta.block === 4,
         reduced: !!meta.reduced,
+        boost: !!meta.boost,
         plyoCut: basketLoad >= 4,
         cycle: meta.cycle,
-        gymPerWeek: p.gymPerWeek,
-      })
+        sessionId: s.id,
+      }
+      s.exercises = s.customized && s.exercises ? rebuildCustom(state, s.exercises, ctx) : buildGym(state, s.template, ctx, p.gymPerWeek)
       s.minutes = gymMinutes(s.exercises)
-      s.title = GYM[s.template].title
+      s.title = flexTitle(s.template, state)
     }
     if (s.kind === 'run' && (s.template === 'quality' || s.template === 'easy' || s.template === 'long')) {
       const { minutes, ...plan } = buildRun(p, s.template, meta)

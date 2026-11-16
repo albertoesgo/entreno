@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { sync, weekSessions } from './engine'
-import { EXERCISES, nextTarget } from './program'
+import { EXERCISES, freshTemplates, nextTarget } from './program'
 import { addDays, weekday } from './dates'
 import type { Session, State } from './types'
 
@@ -11,8 +11,9 @@ function fresh(): State {
     v: 1,
     profile: {
       onboarded: true, age: 25, heightCm: 180, weightKg: 80, goalWeightKg: 76, goalDate: '2027-04-01', startDate: MON,
-      pace5k: 380, basketDays: [1, 3], weekendGame: true, gameDay: 5, gymPerWeek: 3, runsPerWeek: 2, gym: null, gymDetect: false,
+      pace5k: 380, basketDays: [1, 3], weekendGame: true, gameDay: 5, gymPerWeek: 3, runsPerWeek: 2, gym: null, gymDetect: false, blockedDays: [],
     },
+    templates: freshTemplates(), custom: {}, chat: [],
     sessions: [], weeks: {}, weights: [], jumps: [], paces: [],
   }
 }
@@ -96,6 +97,45 @@ describe('planificación semanal', () => {
     t.sessions.forEach((x) => (x.status = 'done'))
     sync(t, next)
     expect(t.weeks[next].block).toBe(2)
+  })
+})
+
+describe('adaptación', () => {
+  it('no coloca gym ni carrera en días bloqueados', () => {
+    const s = fresh()
+    s.profile.blockedDays = [0, 2, 4]
+    sync(s, MON)
+    const flex = weekSessions(s, MON).filter((x) => x.kind === 'gym' || x.kind === 'run')
+    expect(flex.some((x) => [0, 2, 4].includes(day(x)))).toBe(false)
+  })
+
+  it('una rutina editada cambia las sesiones planificadas', () => {
+    const s = fresh()
+    s.templates.B.items = s.templates.B.items.map((i) => (i.id === 'bench' ? { id: 'dbbench', sets: 3 } : i))
+    sync(s, MON)
+    const b = byTpl(s, 'B')
+    expect(b.exercises!.some((e) => e.id === 'dbbench' && e.sets === 3)).toBe(true)
+    expect(b.exercises!.some((e) => e.id === 'bench')).toBe(false)
+  })
+
+  it('una sesión personalizada conserva sus ejercicios al replanificar', () => {
+    const s = fresh()
+    sync(s, MON)
+    const a = byTpl(s, 'A')
+    a.exercises = a.exercises!.filter((e) => e.id !== 'squat')
+    a.customized = true
+    sync(s, MON)
+    const again = s.sessions.find((x) => x.template === 'A')!
+    expect(again.exercises!.some((e) => e.id === 'squat')).toBe(false)
+  })
+
+  it('semana muy dura (RPE alto) → la siguiente es suave', () => {
+    const s = fresh()
+    sync(s, MON)
+    s.sessions.forEach((x) => { x.status = 'done'; x.rpe = 9 })
+    const next = addDays(MON, 7)
+    sync(s, next)
+    expect(s.weeks[next].reduced).toBe(true)
   })
 })
 

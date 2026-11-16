@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react'
-import type { Profile, RunLog, Session, State } from './types'
+import type { ChatMsg, ExerciseDef, GymTemplate, GymTemplateDef, Profile, RunLog, Session, State, TemplateItem } from './types'
 import { sync, uid, weekSessions } from './engine'
 import { todayIso, weekStart } from './dates'
+import { buildBlock, exDef, freshTemplates, gymMinutes } from './program'
 
 const KEY = 'entreno.v1'
 
@@ -28,17 +29,39 @@ export const DEFAULT_PROFILE: Profile = {
   runsPerWeek: 2,
   gym: null,
   gymDetect: true,
+  blockedDays: [],
 }
 
-const fresh = (): State => ({ v: 1, profile: { ...DEFAULT_PROFILE }, sessions: [], weeks: {}, weights: [], jumps: [], paces: [] })
+const fresh = (): State => ({
+  v: 1,
+  profile: { ...DEFAULT_PROFILE },
+  templates: freshTemplates(),
+  custom: {},
+  chat: [],
+  sessions: [],
+  weeks: {},
+  weights: [],
+  jumps: [],
+  paces: [],
+})
+
+/** Completa estados guardados con versiones anteriores de la app. */
+function hydrate(s: Partial<State>): State {
+  const base = fresh()
+  return {
+    ...base,
+    ...s,
+    profile: { ...DEFAULT_PROFILE, ...s.profile },
+    templates: { ...base.templates, ...s.templates },
+    custom: s.custom ?? {},
+    chat: s.chat ?? [],
+  } as State
+}
 
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) {
-      const s = JSON.parse(raw) as State
-      return { ...fresh(), ...s, profile: { ...DEFAULT_PROFILE, ...s.profile } }
-    }
+    if (raw) return hydrate(JSON.parse(raw))
   } catch {
     /* sin almacenamiento: empezamos de cero */
   }
@@ -87,6 +110,26 @@ function upsertMetric(list: { date: string; value: number }[], date: string, val
   else list.push({ date, value })
   list.sort((a, b) => a.date.localeCompare(b.date))
 }
+
+function blockCtx(d: State, s: Session) {
+  const meta = d.weeks[weekStart(s.date)]
+  return {
+    date: s.date,
+    deload: meta?.block === 4,
+    reduced: !!meta?.reduced,
+    boost: !!meta?.boost,
+    plyoCut: false,
+    cycle: meta?.cycle ?? 0,
+    sessionId: s.id,
+  }
+}
+
+function noteChange(d: State, today: string, text: string) {
+  const meta = d.weeks[weekStart(today)]
+  if (meta && !meta.changes.some((c) => c.text === text)) meta.changes.push({ date: today, text })
+}
+
+export type Scope = 'session' | 'always'
 
 export const actions = {
   sync: () => update(() => {}),
@@ -231,6 +274,130 @@ export const actions = {
     return id
   },
 
+  // ── Edición de ejercicios ────────────────────────────────────────────────
+
+  /** Cambia un ejercicio de una sesión. Con scope 'always' también en la rutina. */
+  swapExercise(sessionId: string, index: number, newId: string, scope: Scope) {
+    update((d, today) => {
+      const s = find(d, sessionId)
+      const b = s?.exercises?.[index]
+      if (!s || !b) return
+      const oldId = b.id
+      s.exercises![index] = buildBlock(d, { id: newId, sets: b.baseSets ?? b.sets }, blockCtx(d, s), index)
+      s.customized = true
+      s.minutes = gymMinutes(s.exercises!)
+      if (scope === 'always' && s.template && s.template in d.templates) {
+        const t = d.templates[s.template as GymTemplate]
+        t.items = t.items.map((it) => (it.id === oldId ? { id: newId, sets: it.sets } : it))
+        noteChange(d, today, `${t.title}: ${exDef(d, oldId).name} → ${exDef(d, newId).name} a partir de ahora.`)
+      }
+    })
+  },
+
+  addExercise(sessionId: string, id: string, sets: number, scope: Scope) {
+    update((d, today) => {
+      const s = find(d, sessionId)
+      if (!s) return
+      s.exercises = s.exercises ?? []
+      s.exercises.push(buildBlock(d, { id, sets }, blockCtx(d, s), s.exercises.length))
+      s.customized = true
+      s.minutes = gymMinutes(s.exercises)
+      if (scope === 'always' && s.template && s.template in d.templates) {
+        const t = d.templates[s.template as GymTemplate]
+        t.items.push({ id, sets })
+        noteChange(d, today, `${t.title}: añadido ${exDef(d, id).name}.`)
+      }
+    })
+  },
+
+  removeExercise(sessionId: string, index: number, scope: Scope) {
+    update((d, today) => {
+      const s = find(d, sessionId)
+      const b = s?.exercises?.[index]
+      if (!s || !b) return
+      s.exercises!.splice(index, 1)
+      s.customized = true
+      s.minutes = gymMinutes(s.exercises!)
+      if (scope === 'always' && s.template && s.template in d.templates) {
+        const t = d.templates[s.template as GymTemplate]
+        t.items = t.items.filter((it) => it.id !== b.id)
+        noteChange(d, today, `${t.title}: quitado ${exDef(d, b.id).name}.`)
+      }
+    })
+  },
+
+  /** Añade o quita una serie solo en esta sesión. */
+  changeSets(sessionId: string, index: number, delta: number) {
+    update((d) => {
+      const s = find(d, sessionId)
+      const b = s?.exercises?.[index]
+      if (!s || !b) return
+      if (delta > 0 && b.sets < 8) {
+        const last = b.log[b.log.length - 1]
+        b.log.push({ kg: last?.kg ?? b.targetKg, reps: b.targetReps, done: false })
+        b.sets++
+      }
+      if (delta < 0 && b.sets > 1 && !b.log[b.log.length - 1].done) {
+        b.log.pop()
+        b.sets--
+      }
+      b.baseSets = b.sets
+      s.customized = true
+      s.minutes = gymMinutes(s.exercises!)
+    }, false)
+  },
+
+  // ── Rutinas ──────────────────────────────────────────────────────────────
+
+  setTemplate(t: GymTemplate, def: GymTemplateDef) {
+    update((d, today) => {
+      d.templates[t] = structuredClone(def)
+      // las sesiones futuras sin empezar vuelven a seguir la rutina
+      for (const s of d.sessions) if (s.template === t && s.status === 'planned' && s.date >= today && !s.exercises?.some((e) => e.log.some((l) => l.done))) delete s.customized
+      noteChange(d, today, `Rutina «${def.title}» actualizada: el plan recalcula pesos y series.`)
+    })
+  },
+
+  resetTemplate(t: GymTemplate) {
+    update((d) => {
+      d.templates[t] = freshTemplates()[t]
+    })
+  },
+
+  createExercise(def: Omit<ExerciseDef, 'id' | 'custom'>): string {
+    const id = `c_${uid()}`
+    update((d) => {
+      d.custom[id] = { ...def, id, custom: true }
+    }, false)
+    return id
+  },
+
+  deleteExercise(id: string) {
+    update((d) => {
+      delete d.custom[id]
+      for (const t of Object.values(d.templates)) t.items = t.items.filter((i: TemplateItem) => i.id !== id)
+    })
+  },
+
+  /** Modo de la semana actual: normal, suave o más carga. */
+  setWeekMode(mode: 'normal' | 'reduced' | 'boost') {
+    update((d, today) => {
+      const meta = d.weeks[weekStart(today)]
+      if (!meta) return
+      meta.reduced = mode === 'reduced'
+      meta.boost = mode === 'boost'
+      noteChange(
+        d,
+        today,
+        mode === 'reduced'
+          ? 'Semana en modo suave: una serie menos y carreras más cortas.'
+          : mode === 'boost'
+            ? 'Semana con más carga: una serie más en los básicos.'
+            : 'Semana en modo normal.',
+      )
+    })
+  },
+
   checkin(fatigue: number, weightKg: number | null) {
     update((d, today) => {
       const meta = d.weeks[weekStart(today)]
@@ -239,7 +406,12 @@ export const actions = {
       meta.checkin = true
       if (fatigue >= 4 && !meta.reduced) {
         meta.reduced = true
+        meta.boost = false
         meta.changes.push({ date: today, text: 'Llegas cargado: esta semana una serie menos por ejercicio y carreras más cortas.' })
+      }
+      if (fatigue === 1 && !meta.reduced && !meta.boost && meta.block !== 4) {
+        meta.boost = true
+        meta.changes.push({ date: today, text: 'Llegas fresco: una serie más en los básicos esta semana.' })
       }
       if (weightKg) {
         upsertMetric(d.weights, today, weightKg)
@@ -267,12 +439,27 @@ export const actions = {
     })
   },
 
+  // ── Chat del coach ───────────────────────────────────────────────────────
+
+  pushChat(msg: ChatMsg) {
+    update((d) => {
+      d.chat.push(msg)
+      if (d.chat.length > 60) d.chat.splice(0, d.chat.length - 60)
+    }, false)
+  },
+
+  clearChat() {
+    update((d) => {
+      d.chat = []
+    }, false)
+  },
+
   exportJSON: () => JSON.stringify(state, null, 2),
 
   importJSON(text: string) {
     const s = JSON.parse(text) as State
     if (!s || s.v !== 1 || !Array.isArray(s.sessions)) throw new Error('Archivo no válido')
-    commit({ ...fresh(), ...s, profile: { ...DEFAULT_PROFILE, ...s.profile } })
+    commit(hydrate(s))
     update(() => {})
   },
 

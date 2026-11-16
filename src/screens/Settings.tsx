@@ -3,12 +3,19 @@ import { actions, useStore } from '../lib/store'
 import { ProfileForm } from '../components/ProfileForm'
 import { todayIso } from '../lib/dates'
 import { currentPosition, distanceM } from '../lib/geo'
+import { coachKey, coachModel, forgetCoach } from '../lib/coach'
+import type { GymTemplate } from '../lib/types'
+import { RoutineEditor } from './RoutineEditor'
+import { IChevR, ISpark } from '../components/Icons'
 
 export function Settings() {
   const st = useStore()
   const [saved, setSaved] = useState(false)
   const [key, setKey] = useState(0)
   const file = useRef<HTMLInputElement>(null)
+  const [editing, setEditing] = useState<GymTemplate | null>(null)
+  const [, force] = useState(0)
+  const hasCoach = !!coachKey()
 
   const download = () => {
     const blob = new Blob([actions.exportJSON()], { type: 'application/json' })
@@ -28,6 +35,47 @@ export function Settings() {
         </div>
       </div>
 
+      <div className="section-head">
+        <span className="section-title">Rutinas de gimnasio</span>
+      </div>
+      <div className="list card-list">
+        {(Object.keys(st.templates) as GymTemplate[]).map((t) => (
+          <button key={t} className="list-row" onClick={() => setEditing(t)}>
+            <span className="badge-letter">{t}</span>
+            <span className="grow">
+              <b>{st.templates[t].title}</b>
+              <small>{st.templates[t].items.length} ejercicios · toca para editar</small>
+            </span>
+            <IChevR />
+          </button>
+        ))}
+      </div>
+
+      <div className="section">
+        <div className="section-head">
+          <span className="section-title">Coach IA</span>
+          {hasCoach && <span className="small" style={{ color: 'var(--run)' }}>conectado</span>}
+        </div>
+        <div className="card stack">
+          <div className="row-inline">
+            <span className="spark sm">
+              <ISpark />
+            </span>
+            <p className="small muted" style={{ flex: 1 }}>
+              {hasCoach ? `Usando ${coachModel()}. La clave solo está en este móvil.` : 'Conéctalo desde la pestaña Coach con tu clave gratuita de Gemini.'}
+            </p>
+          </div>
+          {hasCoach && (
+            <button className="btn line sm danger" onClick={() => (forgetCoach(), force((n) => n + 1))}>
+              Desconectar y borrar clave
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="section-head section">
+        <span className="section-title">Perfil y plan</span>
+      </div>
       <ProfileForm
         key={key}
         initial={st.profile}
@@ -40,6 +88,7 @@ export function Settings() {
       />
 
       <GymPlace />
+      {editing && <RoutineEditor t={editing} onClose={() => setEditing(null)} />}
 
       <div className="section">
         <div className="section-head">

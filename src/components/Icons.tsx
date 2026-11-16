@@ -61,3 +61,53 @@ export const IShuffle = () => (
     <path d="M4 7h3.5c4 0 5 10 9 10H20M17 14l3 3-3 3M4 17h3.5c1.4 0 2.4-1.2 3.3-2.8M17 4l3 3-3 3M13.2 9.8C14 8.2 15 7 16.5 7H20" />
   </Svg>
 )
+export const ISearch = () => (
+  <Svg>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20 20-4.2-4.2" />
+  </Svg>
+)
+export const IMore = () => (
+  <Svg>
+    <circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+  </Svg>
+)
+export const ISpark = () => (
+  <Svg>
+    <path d="M12 3.5c.6 3.9 2.6 5.9 6.5 6.5-3.9.6-5.9 2.6-6.5 6.5-.6-3.9-2.6-5.9-6.5-6.5 3.9-.6 5.9-2.6 6.5-6.5Z" />
+    <path d="M18.5 15.5c.25 1.5 1 2.25 2.5 2.5-1.5.25-2.25 1-2.5 2.5-.25-1.5-1-2.25-2.5-2.5 1.5-.25 2.25-1 2.5-2.5Z" />
+  </Svg>
+)
+export const ISend = () => (
+  <Svg>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Svg>
+)
+export const ITimer = () => (
+  <Svg>
+    <circle cx="12" cy="13.5" r="7" />
+    <path d="M12 10v3.5l2 2M10 3h4" />
+  </Svg>
+)
+export const IUp = () => (
+  <Svg>
+    <path d="m6 15 6-6 6 6" />
+  </Svg>
+)
+export const IDown = () => (
+  <Svg>
+    <path d="m6 9 6 6 6-6" />
+  </Svg>
+)
+export const ISwap = () => (
+  <Svg>
+    <path d="M7 4 4 7l3 3M4 7h13M17 20l3-3-3-3M20 17H7" />
+  </Svg>
+)
+export const ITrash = () => (
+  <Svg>
+    <path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13" />
+  </Svg>
+)

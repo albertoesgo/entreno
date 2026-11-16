@@ -56,6 +56,25 @@ export function Week({ open }: { open: (id: string) => void }) {
         </div>
       </div>
 
+      {start === current && meta && (
+        <div className="mode">
+          {(
+            [
+              ['normal', 'Normal'],
+              ['reduced', 'Suave'],
+              ['boost', '+ Carga'],
+            ] as const
+          ).map(([m, label]) => {
+            const on = m === 'reduced' ? !!meta.reduced : m === 'boost' ? !!meta.boost : !meta.reduced && !meta.boost
+            return (
+              <button key={m} className={on ? 'on' : ''} onClick={() => !on && actions.setWeekMode(m)}>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <div className="section stack">
         {Array.from({ length: 7 }, (_, d) => {
           const date = addDays(start, d)
@@ -111,10 +130,11 @@ function AddSheet({ start, onClose, onCreated }: { start: string; onClose: () =>
             </button>
           ))}
         </div>
-        <div className="seg" style={accent(kind)}>
+        <div className="day-grid" style={accent(kind)}>
           {Array.from({ length: 7 }, (_, d) => addDays(start, d)).map((d, i) => (
             <button key={d} className={date === d ? 'on' : ''} onClick={() => setDate(d)}>
-              {DAY_SHORT[i]} {parse(d).getDate()}
+              <small>{DAY_SHORT[i]}</small>
+              {parse(d).getDate()}
             </button>
           ))}
         </div>

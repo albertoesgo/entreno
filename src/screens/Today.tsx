@@ -1,18 +1,24 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { actions, currentWeek, gymSessionFor, useStore } from '../lib/store'
 import { addDays, DAY_SHORT, diffDays, fmtDay, monthName, parse, todayIso } from '../lib/dates'
 import { BLOCK_LABEL } from '../lib/program'
 import { num } from '../lib/format'
 import { SessionCard, KIND } from '../components/SessionCard'
-import { IShuffle } from '../components/Icons'
+import { IShuffle, ISpark } from '../components/Icons'
 
-export function Today({ open, goWeek, atGym }: { open: (id: string) => void; goWeek: () => void; atGym: boolean }) {
+const css = (o: Record<string, string>) => o as CSSProperties
+
+export function Today({ open, goWeek, atGym, ask }: { open: (id: string) => void; goWeek: () => void; atGym: boolean; ask: (q: string) => void }) {
   const st = useStore()
   const today = todayIso()
   const { start, meta, sessions } = currentWeek(st, today)
   const todays = sessions.filter((s) => s.date === today && s.status !== 'skipped')
   const upcoming = st.sessions.filter((s) => s.date > today && s.status === 'planned').slice(0, 3)
   const weeksLeft = Math.max(0, Math.ceil(diffDays(today, st.profile.goalDate) / 7))
+  const active = sessions.filter((s) => s.status === 'planned' || s.status === 'done' || s.status === 'missed')
+  const done = sessions.filter((s) => s.status === 'done').length
+  const pct = active.length ? done / active.length : 0
+  const pending = todays.filter((s) => s.status === 'planned')
 
   return (
     <>
@@ -21,28 +27,42 @@ export function Today({ open, goWeek, atGym }: { open: (id: string) => void; goW
           <div className="eyebrow">{fmtDay(today)}</div>
           <h1>Hoy</h1>
         </div>
-        <span className="pill" style={{ '--c': 'var(--run)' } as React.CSSProperties}>
+        <span className="pill" style={css({ '--c': 'var(--run)' })}>
           <span className="dot" />
-          {weeksLeft} sem hasta {monthName(st.profile.goalDate)}
+          {weeksLeft} sem · {monthName(st.profile.goalDate)}
         </span>
       </div>
 
-      <button className="strip" onClick={goWeek} style={{ width: '100%' }} aria-label="Ver semana">
-        {Array.from({ length: 7 }, (_, d) => {
-          const date = addDays(start, d)
-          const list = sessions.filter((s) => s.date === date && s.status !== 'skipped')
-          return (
-            <div key={d} className={`strip-day ${date === today ? 'today' : ''} ${date < today ? 'past' : ''}`}>
-              <span className="l">{DAY_SHORT[d]}</span>
-              <span className="n">{parse(date).getDate()}</span>
-              <span className="dots">
-                {list.map((s) => (
-                  <i key={s.id} className={s.status} style={{ '--c': KIND[s.kind].color } as React.CSSProperties} />
-                ))}
-              </span>
+      <button className="hero" onClick={goWeek} aria-label="Ver semana">
+        <div className="hero-top">
+          <Ring pct={pct} label={`${done}/${active.length}`} />
+          <div className="hero-txt">
+            <div className="eyebrow">Semana {meta ? `· ${BLOCK_LABEL[meta.block]}` : ''}</div>
+            <div className="hero-title">
+              {pct >= 1 ? 'Semana completada' : pending.length ? `Hoy: ${pending.map((s) => s.title).join(' + ')}` : 'Hoy toca descansar'}
             </div>
-          )
-        })}
+            <div className="small muted">
+              {meta?.reduced ? 'Modo suave activo' : meta?.boost ? 'Modo +carga activo' : `Bloque ${meta?.block ?? 1} de 4`}
+            </div>
+          </div>
+        </div>
+        <div className="strip">
+          {Array.from({ length: 7 }, (_, d) => {
+            const date = addDays(start, d)
+            const list = sessions.filter((s) => s.date === date && s.status !== 'skipped')
+            return (
+              <div key={d} className={`strip-day ${date === today ? 'today' : ''} ${date < today ? 'past' : ''}`}>
+                <span className="l">{DAY_SHORT[d]}</span>
+                <span className="n">{parse(date).getDate()}</span>
+                <span className="dots">
+                  {list.map((s) => (
+                    <i key={s.id} className={s.status} style={css({ '--c': KIND[s.kind].color })} />
+                  ))}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </button>
 
       {atGym && <GymBanner open={open} />}
@@ -52,11 +72,6 @@ export function Today({ open, goWeek, atGym }: { open: (id: string) => void; goW
       <div className="section">
         <div className="section-head">
           <span className="section-title">Sesiones de hoy</span>
-          {meta && (
-            <span className="small muted">
-              Bloque {meta.block}/4 · {BLOCK_LABEL[meta.block]}
-            </span>
-          )}
         </div>
         <div className="stack">
           {todays.length ? (
@@ -64,14 +79,23 @@ export function Today({ open, goWeek, atGym }: { open: (id: string) => void; goW
           ) : (
             <div className="card rest">
               <div className="eyebrow">Descanso</div>
-              <div className="big-word" style={{ marginTop: 6 }}>
-                Recupera
-              </div>
-              <p className="muted small" style={{ marginTop: 6 }}>
-                10' de movilidad de cadera y tobillo, camina y duerme bien. Mañana rindes más.
-              </p>
+              <div className="big-word">Recupera</div>
+              <p className="muted small">10' de movilidad de cadera y tobillo, camina y duerme bien. Mañana rindes más.</p>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="section">
+        <div className="section-head">
+          <span className="section-title">Pregunta al coach</span>
+        </div>
+        <div className="chips-scroll inline">
+          {['Hoy solo tengo 40 minutos', 'Estoy cansado, ¿qué hago hoy?', '¿Qué como antes del partido?', 'Me molesta algo, adapta la sesión'].map((q) => (
+            <button key={q} onClick={() => ask(q)}>
+              <ISpark /> {q}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -102,9 +126,7 @@ export function Today({ open, goWeek, atGym }: { open: (id: string) => void; goW
           <div className="stack">
             {upcoming.map((s) => (
               <div key={s.id}>
-                <div className="small muted" style={{ margin: '0 0 6px 4px' }}>
-                  {fmtDay(s.date)}
-                </div>
+                <div className="small muted day-cap">{fmtDay(s.date)}</div>
                 <SessionCard s={s} onOpen={open} />
               </div>
             ))}
@@ -115,34 +137,74 @@ export function Today({ open, goWeek, atGym }: { open: (id: string) => void; goW
   )
 }
 
+function Ring({ pct, label }: { pct: number; label: string }) {
+  const r = 26
+  const c = 2 * Math.PI * r
+  return (
+    <div className="ring">
+      <svg viewBox="0 0 64 64" width="64" height="64">
+        <defs>
+          <linearGradient id="ringg" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stopColor="var(--gym)" />
+            <stop offset="1" stopColor="var(--run)" />
+          </linearGradient>
+        </defs>
+        <circle cx="32" cy="32" r={r} stroke="var(--s3)" strokeWidth="6" fill="none" />
+        {pct > 0 && <circle
+          cx="32"
+          cy="32"
+          r={r}
+          stroke="url(#ringg)"
+          strokeWidth="6"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${c * Math.min(1, pct)} ${c}`}
+          transform="rotate(-90 32 32)"
+        />}
+      </svg>
+      <span className="tnum">{label}</span>
+    </div>
+  )
+}
+
 function Checkin() {
   const st = useStore()
   const [fatigue, setFatigue] = useState<number | null>(null)
   const [kg, setKg] = useState('')
-  const labels = ['Fresco', 'Bien', 'Normal', 'Cargado', 'Reventado']
+  const labels = ['Fresco', 'Bien', 'Normal', 'Cargado', 'Fundido']
   return (
     <div className="section">
-      <div className="card" style={{ display: 'grid', gap: 14 }}>
+      <div className="card checkin">
         <div>
           <div className="eyebrow">Check-in semanal</div>
-          <div style={{ fontWeight: 650, fontSize: 18, marginTop: 4 }}>¿Cómo llegas a esta semana?</div>
+          <div className="card-title">¿Cómo llegas a esta semana?</div>
         </div>
-        <div className="seg" style={{ '--c': 'var(--jump)' } as React.CSSProperties}>
+        <div className="scale">
           {labels.map((l, i) => (
             <button key={l} className={fatigue === i + 1 ? 'on' : ''} onClick={() => setFatigue(i + 1)}>
-              {l}
+              <b>{i + 1}</b>
+              <small>{l}</small>
             </button>
           ))}
         </div>
-        <div className="row" style={{ alignItems: 'center' }}>
+        <p className="small muted">
+          {fatigue == null
+            ? 'Si llegas cargado, el plan afloja; si llegas fresco, aprieta un poco.'
+            : fatigue >= 4
+              ? 'Esta semana irá en modo suave.'
+              : fatigue === 1
+                ? 'Añadiremos una serie a los básicos.'
+                : 'Plan normal.'}
+        </p>
+        <div className="inline-add">
           <input
             className="input"
             inputMode="decimal"
-            placeholder={`Peso (${String(st.profile.weightKg).replace('.', ',')} kg)`}
+            placeholder={`Peso hoy · último ${String(st.profile.weightKg).replace('.', ',')} kg`}
             value={kg}
             onChange={(e) => setKg(e.target.value)}
           />
-          <button className="btn" style={{ flex: '0 0 auto', width: 'auto' }} disabled={!fatigue} onClick={() => actions.checkin(fatigue!, num(kg))}>
+          <button className="btn sm" disabled={!fatigue} onClick={() => actions.checkin(fatigue!, num(kg))}>
             Listo
           </button>
         </div>
@@ -164,9 +226,7 @@ function GymBanner({ open }: { open: (id: string) => void }) {
         </div>
         {hit ? (
           <>
-            <div style={{ fontWeight: 650, fontSize: 18, marginTop: 4 }}>
-              {hit.isToday ? `Toca ${hit.session.title}` : `Hoy no tocaba gym: ¿adelantas ${hit.session.title}?`}
-            </div>
+            <div className="card-title">{hit.isToday ? `Toca ${hit.session.title}` : `Hoy no tocaba gym: ¿adelantas ${hit.session.title}?`}</div>
             <button
               className="btn"
               style={{ marginTop: 14, background: 'var(--gym)' }}

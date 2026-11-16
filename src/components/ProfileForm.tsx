@@ -20,6 +20,7 @@ export function ProfileForm({ initial, submitLabel, onSubmit, extra }: {
   const [gameDay, setGameDay] = useState(initial.gameDay)
   const [gym, setGym] = useState(initial.gymPerWeek)
   const [runs, setRuns] = useState(initial.runsPerWeek)
+  const [blocked, setBlocked] = useState<number[]>(initial.blockedDays ?? [])
 
   const paceN = parseTime(pace)
   const valid = num(weight) && num(goalW) && paceN && paceN > 180 && paceN < 600
@@ -64,7 +65,7 @@ export function ProfileForm({ initial, submitLabel, onSubmit, extra }: {
         <div className="eyebrow" style={{ color: 'var(--basket)' }}>Basket</div>
         <div className="field">
           <span>Días de entreno</span>
-          <div className="seg" style={c('var(--basket)')}>
+          <div className="days7" style={c('var(--basket)')}>
             {DAY_SHORT.map((l, i) => (
               <button
                 key={l}
@@ -126,6 +127,20 @@ export function ProfileForm({ initial, submitLabel, onSubmit, extra }: {
         </div>
       </div>
 
+      <div className="form-group">
+        <div className="eyebrow">Disponibilidad</div>
+        <div className="field">
+          <span>Días sin gym ni carrera (trabajo, viajes…)</span>
+          <div className="days7" style={c('var(--bad)')}>
+            {DAY_SHORT.map((l, i) => (
+              <button key={l} className={blocked.includes(i) ? 'on' : ''} onClick={() => setBlocked(blocked.includes(i) ? blocked.filter((d) => d !== i) : [...blocked, i].sort())}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {extra}
 
       <button
@@ -144,6 +159,7 @@ export function ProfileForm({ initial, submitLabel, onSubmit, extra }: {
             gameDay,
             gymPerWeek: gym,
             runsPerWeek: runs,
+            blockedDays: blocked,
           })
         }
       >

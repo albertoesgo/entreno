@@ -13,6 +13,7 @@ export interface SetLog {
 export interface ExerciseBlock {
   id: string
   sets: number
+  baseSets?: number // series antes de descarga/modo suave
   repMin: number
   repMax: number
   targetKg: number | null // null = calibrar (primera vez)
@@ -50,6 +51,7 @@ export interface Session {
   movedFrom?: string
   noRoomNoted?: boolean
   exercises?: ExerciseBlock[]
+  customized?: boolean // ejercicios cambiados solo para esta sesión
   run?: RunPlan
   runLog?: RunLog
   rpe?: number
@@ -72,6 +74,7 @@ export interface Profile {
   runsPerWeek: 1 | 2 | 3
   gym: { lat: number; lng: number; radius: number } | null
   gymDetect: boolean
+  blockedDays: number[] // días sin gym ni carrera
 }
 
 export interface Change {
@@ -84,6 +87,7 @@ export interface WeekMeta {
   block: 1 | 2 | 3 | 4
   cycle: number
   reduced?: boolean
+  boost?: boolean
   fatigue?: number
   checkin?: boolean
   compliance?: number
@@ -96,9 +100,47 @@ export interface Metric {
   value: number
 }
 
+export type Load = 'kg' | 'bw+' | 'bw' | 'plyo'
+
+export interface ExerciseDef {
+  id: string
+  name: string
+  group: string
+  repMin: number
+  repMax: number
+  inc: number // kg a subir al completar el rango
+  load: Load
+  cue?: string
+  custom?: boolean
+}
+
+export interface TemplateItem {
+  id: string
+  sets: number
+  repMin?: number
+  repMax?: number
+  maxSets?: number
+}
+
+export interface GymTemplateDef {
+  title: string
+  focus: string
+  items: TemplateItem[]
+}
+
+export interface ChatMsg {
+  role: 'user' | 'model'
+  text: string
+  actions?: string[]
+  at: string
+}
+
 export interface State {
   v: 1
   profile: Profile
+  templates: Record<GymTemplate, GymTemplateDef>
+  custom: Record<string, ExerciseDef>
+  chat: ChatMsg[]
   sessions: Session[]
   weeks: Record<string, WeekMeta>
   weights: Metric[]
