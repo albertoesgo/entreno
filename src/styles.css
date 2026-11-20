@@ -488,13 +488,3 @@ details[open] summary::after { content: '–'; }
 .list-pair .list-row { flex: 1; min-width: 0; }
 .list-pair .info-btn { width: 48px; flex-shrink: 0; border-radius: 14px; background: var(--s1); display: grid; place-items: center; color: var(--mut); }
 .list-pair .info-btn svg { width: 20px; height: 20px; }
-
-/* ── Calendario de partidos ─────────────────── */
-.cal-list { display: grid; gap: 6px; }
-.cal-row { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--s2); border-left: 3px solid var(--match); }
-.cal-row .cal-date { display: grid; gap: 1px; min-width: 72px; }
-.cal-row .cal-date b { font-size: 13px; font-weight: 650; text-transform: capitalize; }
-.cal-row .cal-date small { font-size: 12px; color: var(--match); }
-.cal-row .grow { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.cal-row .grow b { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.cal-row .grow small { font-size: 12px; color: var(--mut); overflow-wrap: anywhere; }

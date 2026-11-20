@@ -29,10 +29,9 @@ export function summary(s: Session): string {
     if (s.run?.targetPace) return `${s.run.type === 'easy' ? 'suave ' : ''}${fmtPace(s.run.targetPace)} /km · ~${s.minutes}'`
     return s.run?.detail ?? ''
   }
-  const at = s.time && s.status === 'planned' ? `${s.time} · ` : ''
-  if (s.note) return at + s.note
+  if (s.note) return s.note
   if (s.assumed) return `${s.minutes}' · sin registrar`
-  return `${at}${s.minutes}'${s.rpe ? ` · RPE ${s.rpe}` : ''}`
+  return `${s.minutes}'${s.rpe ? ` · RPE ${s.rpe}` : ''}`
 }
 
 const STATUS: Partial<Record<Session['status'], string>> = { missed: 'No hecho', skipped: 'Saltado' }

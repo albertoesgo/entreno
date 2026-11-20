@@ -12,7 +12,7 @@ PWA personal para organizar **basket, gimnasio y carrera** en una sola semana, c
 | Stack | React 19 + TypeScript + Vite · `vite-plugin-pwa` (service worker de Workbox) |
 | Funciona sin conexión | Sí. Todo el código queda cacheado tras la primera visita |
 | Servidor / backend | Ninguno. Es una web estática en GitHub Pages |
-| IA | El plan lo hace un motor de reglas determinista (gratis, sin conexión). Encima, un **coach opcional con Gemini** (tu propia clave gratuita) que conversa y ejecuta cambios en la app (§9) |
+| IA | El plan lo hace un motor de reglas determinista (gratis, sin conexión). Encima, un **coach opcional con Gemini** (tu propia clave gratuita) que conversa y ejecuta cambios en la app (§10) |
 | Publicación | Cada push a `main` → GitHub Action → tests → build → GitHub Pages |
 
 ---
@@ -23,7 +23,6 @@ PWA personal para organizar **basket, gimnasio y carrera** en una sola semana, c
 - **Nada sale del móvil.** La app no hace peticiones de red con tus datos; solo descarga su propio código y, cuando abres la ficha de un ejercicio, sus dos fotos de demostración (desde jsDelivr, sin datos tuyos).
 - **Ubicación:** solo se lee si guardas tu gimnasio y activas *Detectar al abrir la app*. Se consulta **una vez al abrir la app** (nunca en segundo plano) y se compara en el propio móvil con la ubicación guardada.
 - **Coach IA (opcional):** solo si lo conectas. La clave de Gemini se guarda aparte (`entreno.gemini.key`), nunca se exporta. Al escribirle, se envía a Google un resumen de tu perfil, la semana actual, las 3 últimas semanas, tus rutinas y tus últimos pesos. En el nivel gratuito Google puede usarlo para mejorar sus modelos.
-- **Calendario de partidos (opcional):** si lo conectas, al abrir la app se descarga el `.ics` a través de un Worker de Cloudflare propio (`worker/`), que solo reenvía el calendario (comprueba que la petición viene de la app y que la respuesta es un calendario; no guarda ni registra nada). Solo se usan título, fecha, hora y lugar de los eventos que son partidos.
 - **Copia de seguridad:** *Ajustes → Exportar* descarga un `.json` con todo; *Importar* lo restaura (sirve también para pasar los datos a otro móvil).
 - **Borrar:** *Ajustes → Borrar todo*. Borrar los datos de Safari o desinstalar la app también los borra: exporta de vez en cuando.
 
@@ -36,7 +35,6 @@ PWA personal para organizar **basket, gimnasio y carrera** en una sola semana, c
 | Semanas: bloque, ciclo, cumplimiento, cansancio, lista de reajustes | Las calcula el motor |
 | Historial de peso, ritmo 5K y salto vertical | Tus registros (el ritmo también se actualiza solo, ver §7) |
 | Ubicación del gimnasio (lat/lng, radio 150 m) | Botón en Ajustes, estando en el gimnasio |
-| Calendario conectado (enlace .ics, palabras clave, última sincronización) y partidos que vienen de él | Ajustes → Calendario de partidos |
 
 ---
 
@@ -228,32 +226,16 @@ Cada acción aparece como una etiqueta verde bajo la respuesta. Máximo 6 pasos 
 
 ---
 
-## 11. Calendario de partidos
+## 11. Límites conocidos
 
-*Ajustes → Calendario de partidos.* Sirve cualquier enlace `.ics`/`webcal://`:
-
-- **Calendario suscrito del club o la federación:** Ajustes del iPhone → Apps → Calendario → Cuentas → Calendarios suscritos → copiar la dirección.
-- **Calendario de iCloud:** app Calendario → Calendarios → ⓘ → *Calendario público* → *Compartir enlace*. Quien tenga el enlace puede verlo, así que mejor un calendario solo de basket.
-- **Google Calendar:** «dirección secreta en formato iCal».
-
-**Cómo funciona** (`src/lib/ics.ts`, `src/lib/calendar.ts`, `reconcileCalendar` en `engine.ts`):
-
-1. Al abrir la app (como mucho cada 30 min, o con *Sincronizar ahora*) se leen los eventos de esta semana y las 10 siguientes. Entiende horas con zona horaria o UTC, días completos, eventos cancelados y repeticiones diarias/semanales con excepciones y ocurrencias movidas.
-2. **¿Es un partido?** Si el título contiene alguna palabra clave (por defecto *partido, vs, jornada, liga, copa, amistoso, torneo*, como palabra completa) o si marcas que todos los eventos lo son. Antes de conectar, *Probar enlace* enseña qué detecta.
-3. **Encaje en el plan:** cada partido nuevo entra como sesión fija (90', con hora y lugar). Si coincide con un entreno de basket, el entreno se sustituye. Si un partido cambia de día se mueve y, si desaparece del calendario, se quita y el entreno vuelve. Lo ya jugado no se toca. Después el motor recoloca gimnasio y carreras con la tabla de costes (§4), así que la pierna se aparta sola de la víspera del partido.
-4. **Partido del finde:** con *Partido del finde: solo del calendario* (por defecto) deja de generarse el partido automático del perfil; si el calendario lleva más de 14 días sin sincronizar, vuelve el automático para no quedarte sin carga planificada.
-5. Cada cambio aparece en *Reajustes de la semana*.
-
-## 12. Límites conocidos
-
-- El calendario solo se actualiza al abrir la app (no hay sincronización en segundo plano).
+- No lee el calendario del iPhone. Los partidos entre semana se añaden a mano (posible v2: calendario público de iCloud + proxy).
 - No sincroniza entre dispositivos. Para pasar los datos, exportar e importar.
 - Al tocar la notificación de Atajos se abre Atajos, no Entreno. Para abrir la app directamente haría falta push con servidor (posible v2).
 - El coach necesita conexión y depende de los límites del nivel gratuito de Gemini (si se agotan, avisa y vuelve a funcionar al rato).
 
 ---
 
-## 13. Desarrollo
+## 12. Desarrollo
 
 ```bash
 npm install
@@ -262,15 +244,12 @@ npm test         # tests del motor (planificación, reajustes, progresión)
 npm run build    # build de producción en dist/
 npm run icons    # regenerar iconos
 node scripts/demos.mjs  # regenerar el índice de demostraciones (public/demos.json)
-cd worker && npx wrangler deploy  # publicar el puente del calendario en Cloudflare
 ```
 
 | Archivo | Qué contiene |
 |---|---|
 | `src/lib/engine.ts` | Motor: semanas, bloques, colocación, reajustes |
 | `src/lib/program.ts` | Ejercicios, plantillas, progresión de gym y carrera |
-| `src/lib/ics.ts` · `src/lib/calendar.ts` | Lector de calendarios y sincronización de partidos |
-| `worker/index.js` | Worker de Cloudflare que reenvía el `.ics` (CORS) |
 | `src/lib/howto.ts` | Técnica de cada ejercicio y su demostración (carga diferida) |
 | `src/components/ExerciseInfo.tsx` | Ficha del ejercicio, animación y buscador de demostraciones |
 | `src/lib/store.ts` | Estado, persistencia y acciones |

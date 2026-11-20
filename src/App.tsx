@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { actions, getState, gymSessionFor, useStore } from './lib/store'
 import { currentPosition, isInside } from './lib/geo'
-import { syncCalendar } from './lib/calendar'
 import { todayIso } from './lib/dates'
 import { Today } from './screens/Today'
 import { Week } from './screens/Week'
@@ -62,13 +61,11 @@ export default function App() {
 
     actions.sync()
     checkGym()
-    syncCalendar()
     const onVis = () => {
       if (document.visibilityState !== 'visible') return
       last = todayIso()
       actions.sync()
       checkGym()
-      syncCalendar()
     }
     const timer = setInterval(() => {
       if (todayIso() !== last) onVis()

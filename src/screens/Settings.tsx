@@ -6,7 +6,6 @@ import { currentPosition, distanceM } from '../lib/geo'
 import { coachKey, coachModel, forgetCoach } from '../lib/coach'
 import type { GymTemplate } from '../lib/types'
 import { RoutineEditor } from './RoutineEditor'
-import { CalendarSection } from './CalendarSettings'
 import { IChevR, ISpark } from '../components/Icons'
 
 export function Settings() {
@@ -73,8 +72,6 @@ export function Settings() {
           )}
         </div>
       </div>
-
-      <CalendarSection />
 
       <div className="section-head section">
         <span className="section-title">Perfil y plan</span>
