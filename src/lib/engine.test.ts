@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sync, weekSessions } from './engine'
+import { reconcileCalendar, sync, weekSessions } from './engine'
 import { EXERCISES, freshTemplates, nextTarget } from './program'
 import { addDays, weekday } from './dates'
 import type { Session, State } from './types'
@@ -152,4 +152,49 @@ describe('progresión de cargas', () => {
   it('mantiene si falla una vez', () => expect(nextTarget(squat, [block(100, [5, 4, 4, 3])])).toEqual({ kg: 100, reps: 5 }))
   it('baja 5 % si falla dos veces', () =>
     expect(nextTarget(squat, [block(100, [5, 4, 4, 3]), block(100, [5, 4, 3, 3])])).toEqual({ kg: 95, reps: 5 }))
+})
+
+describe('calendario conectado', () => {
+  const match = (key: string, date: string, time = '18:00') => ({ key, date, time, title: `Partido ${key}`, location: 'Pabellón' })
+  const connected = (s: State) => (s.calendar = { url: 'https://x.test/c.ics', words: 'partido', all: false, replaceWeekend: true, lastOk: `${MON}T08:00:00Z` })
+
+  it('un partido entre semana quita el entreno de ese día y aparta la pierna', () => {
+    const s = fresh()
+    sync(s, MON)
+    connected(s)
+    reconcileCalendar(s, [match('m1', '2026-11-19'), match('m2', '2026-11-22')], MON)
+    sync(s, MON)
+    const wk = weekSessions(s, MON)
+    expect(wk.find((x) => x.date === '2026-11-19' && x.kind === 'basket')?.status).toBe('skipped')
+    // El del finde sale del calendario (domingo), no el automático del sábado
+    expect(wk.filter((x) => x.kind === 'match' && x.status === 'planned').map((x) => x.date)).toEqual(['2026-11-19', '2026-11-22'])
+    expect(wk.find((x) => x.cal === 'm1')).toMatchObject({ time: '18:00', note: 'Pabellón', fixed: true })
+    sane(s)
+    expect(s.weeks[MON].changes.some((c) => c.text.includes('Partido añadido desde tu calendario'))).toBe(true)
+  })
+
+  it('si el partido cambia de día se mueve, y si desaparece se quita y vuelve el entreno', () => {
+    const s = fresh()
+    sync(s, MON)
+    connected(s)
+    reconcileCalendar(s, [match('m1', '2026-11-19')], MON)
+    sync(s, MON)
+    const id = s.sessions.find((x) => x.cal === 'm1')!.id
+    reconcileCalendar(s, [match('m1', '2026-11-20', '20:30')], MON)
+    sync(s, MON)
+    expect(s.sessions.find((x) => x.cal === 'm1')).toMatchObject({ id, date: '2026-11-20', time: '20:30' })
+    expect(s.sessions.find((x) => x.date === '2026-11-19' && x.kind === 'basket')?.status).toBe('planned')
+    reconcileCalendar(s, [], MON)
+    sync(s, MON)
+    expect(s.sessions.some((x) => x.cal)).toBe(false)
+    sane(s)
+  })
+
+  it('sin sincronizar en 2 semanas vuelve el partido automático del finde', () => {
+    const s = fresh()
+    connected(s)
+    s.calendar!.lastOk = '2026-10-20T08:00:00Z'
+    sync(s, MON)
+    expect(fixedDays(s)).toEqual(new Set([5]))
+  })
 })

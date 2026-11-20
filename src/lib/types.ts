@@ -56,6 +56,19 @@ export interface Session {
   runLog?: RunLog
   rpe?: number
   note?: string
+  cal?: string // id del evento en tu calendario (partidos sincronizados)
+  time?: string // hora (HH:MM) si viene del calendario
+}
+
+/** Calendario conectado (.ics) del que salen los partidos. */
+export interface CalendarLink {
+  url: string
+  words: string // palabras que identifican un partido, separadas por comas
+  all: boolean // todos los eventos del calendario son partidos
+  replaceWeekend: boolean // el partido del finde sale solo del calendario
+  lastSync?: string // ISO
+  lastOk?: string // ISO
+  error?: string
 }
 
 export interface Profile {
@@ -148,4 +161,5 @@ export interface State {
   weights: Metric[]
   jumps: Metric[]
   paces: Metric[]
+  calendar?: CalendarLink
 }

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
-import type { ChatMsg, ExerciseDef, GymTemplate, GymTemplateDef, Profile, RunLog, Session, State, TemplateItem } from './types'
-import { sync, uid, weekSessions } from './engine'
+import type { CalendarLink, ChatMsg, ExerciseDef, GymTemplate, GymTemplateDef, Profile, RunLog, Session, State, TemplateItem } from './types'
+import { reconcileCalendar, sync, uid, weekSessions } from './engine'
+import type { CalEvent } from './ics'
 import { todayIso, weekStart } from './dates'
 import { buildBlock, exDef, freshTemplates, gymMinutes } from './program'
 
@@ -436,6 +437,45 @@ export const actions = {
 
   logJump(value: number) {
     update((d, today) => upsertMetric(d.jumps, today, value), false)
+  },
+
+  // ── Calendario de partidos ───────────────────────────────────────────────
+  connectCalendar(link: Omit<CalendarLink, 'lastSync' | 'lastOk' | 'error'>, matches: CalEvent[]) {
+    update((d, today) => {
+      d.calendar = { ...link, lastSync: new Date().toISOString(), lastOk: new Date().toISOString() }
+      reconcileCalendar(d, matches, today)
+    })
+  },
+
+  applyCalendar(matches: CalEvent[]) {
+    update((d, today) => {
+      if (!d.calendar) return
+      reconcileCalendar(d, matches, today)
+      d.calendar.lastSync = d.calendar.lastOk = new Date().toISOString()
+      delete d.calendar.error
+    })
+  },
+
+  calendarError(error: string) {
+    update((d) => {
+      if (!d.calendar) return
+      d.calendar.lastSync = new Date().toISOString()
+      d.calendar.error = error
+    }, false)
+  },
+
+  patchCalendar(patch: Partial<CalendarLink>) {
+    update((d) => {
+      if (d.calendar) Object.assign(d.calendar, patch)
+    })
+  },
+
+  /** Desconecta: quita los partidos futuros que venían del calendario. */
+  disconnectCalendar() {
+    update((d, today) => {
+      reconcileCalendar(d, [], today, true)
+      delete d.calendar
+    })
   },
 
   setProfile(patch: Partial<Profile>) {

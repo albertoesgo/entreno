@@ -1,5 +1,6 @@
 import type { GymTemplate, Kind, Profile, Session, State, Template, WeekMeta } from './types'
 import { addDays, dayName, diffDays, weekStart } from './dates'
+import type { CalEvent } from './ics'
 import { DEFAULT_TEMPLATES, buildGym, buildRun, gymMinutes, rebuildCustom } from './program'
 
 /**
@@ -219,9 +220,11 @@ export function sync(state: State, today: string): void {
     if (date < today) continue
     const want: Kind[] = []
     if (p.basketDays.includes(d)) want.push('basket')
-    if (p.weekendGame && p.gameDay === d) want.push('match')
+    if (p.weekendGame && p.gameDay === d && !calendarOwnsWeekend(state, today)) want.push('match')
     for (const k of want) {
       if (kept.some((s) => s.auto && s.kind === k && s.date === date)) continue
+      // Ya hay un partido ese día (del calendario o añadido a mano): ni otro partido ni entreno
+      if (kept.some((s) => s.kind === 'match' && s.date === date && s.status !== 'skipped')) continue
       const h = hints.get(`fx:${k}:${date}`)
       state.sessions.push({
         id: h?.id ?? uid(),
@@ -326,4 +329,59 @@ export function refreshTargets(state: State, start: string, meta: WeekMeta) {
     }
   }
   meta.compliance = compliance(wk)
+}
+
+// ── Calendario conectado ────────────────────────────────────────────────────
+
+/** El partido del finde sale del calendario (si se sincronizó bien hace poco). */
+export function calendarOwnsWeekend(state: State, today: string): boolean {
+  const c = state.calendar
+  return !!c?.replaceWeekend && !!c.lastOk && diffDays(c.lastOk.slice(0, 10), today) <= 14
+}
+
+const SUSTITUIDO = 'Sustituido por partido'
+
+/**
+ * Aplica los partidos del calendario: añade los nuevos, mueve los que cambian de día
+ * y quita los que desaparecen (solo si aún no se han jugado). Después, `sync` recoloca
+ * gimnasio y carreras alrededor.
+ */
+export function reconcileCalendar(state: State, matches: CalEvent[], today: string, silent = false): void {
+  const start = weekStart(today)
+  const byKey = new Map(matches.map((m) => [m.key, m]))
+  const label = (date: string, time?: string) => `${dayName(date)} ${Number(date.slice(8))}${time ? ` a las ${time}` : ''}`
+  const say = (date: string, text: string) => {
+    const meta = state.weeks[weekStart(date)] ?? state.weeks[start]
+    if (meta && !silent) note(meta, today, text)
+  }
+
+  state.sessions = state.sessions.filter((s) => {
+    if (!s.cal || byKey.has(s.cal) || s.status !== 'planned' || s.date < today) return true
+    say(s.date, `${s.title} (${label(s.date)}) ya no está en tu calendario: quitado.`)
+    return false
+  })
+
+  for (const m of matches) {
+    if (m.date < today) continue
+    const s = state.sessions.find((x) => x.cal === m.key)
+    if (s) {
+      if (s.status !== 'planned') continue
+      if (s.date !== m.date) say(m.date, `${m.title}: ${label(s.date)} → ${label(m.date, m.time)} según tu calendario.`)
+      Object.assign(s, { date: m.date, title: m.title, time: m.time, note: m.location })
+    } else {
+      state.sessions.push({ id: uid(), date: m.date, kind: 'match', title: m.title, status: 'planned', minutes: 90, fixed: true, manual: true, cal: m.key, time: m.time, note: m.location })
+      say(m.date, `Partido añadido desde tu calendario: ${label(m.date, m.time)}.`)
+    }
+  }
+
+  // El entreno de basket de un día con partido se sustituye (y vuelve si el partido se va)
+  const matchDays = new Set(state.sessions.filter((s) => s.kind === 'match' && s.status !== 'skipped').map((s) => s.date))
+  for (const s of state.sessions) {
+    if (s.kind !== 'basket' || !s.auto || s.date < today) continue
+    if (s.status === 'planned' && matchDays.has(s.date)) Object.assign(s, { status: 'skipped', note: SUSTITUIDO })
+    else if (s.status === 'skipped' && s.note === SUSTITUIDO && !matchDays.has(s.date)) {
+      s.status = 'planned'
+      delete s.note
+    }
+  }
 }

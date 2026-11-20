@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "TZ=Europe/Madrid vitest run",
     "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
