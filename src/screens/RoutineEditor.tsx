@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { GymTemplate, GymTemplateDef } from '../lib/types'
 import { actions, useStore } from '../lib/store'
 import { DEFAULT_TEMPLATES, GROUPS, exDef } from '../lib/program'
-import { IClose, IDown, IPlus, ISwap, ITrash, IUp } from '../components/Icons'
+import { IClose, IDown, IPlay, IPlus, ISwap, ITrash, IUp } from '../components/Icons'
+import { ExerciseInfo } from '../components/ExerciseInfo'
 import { ExercisePicker, Stepper } from '../components/Pickers'
 
 export function RoutineEditor({ t, onClose }: { t: GymTemplate; onClose: () => void }) {
@@ -10,6 +11,7 @@ export function RoutineEditor({ t, onClose }: { t: GymTemplate; onClose: () => v
   const [draft, setDraft] = useState<GymTemplateDef>(() => structuredClone(st.templates[t]))
   const [open, setOpen] = useState<number | null>(null)
   const [picking, setPicking] = useState<{ index?: number } | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const dirty = JSON.stringify(draft) !== JSON.stringify(st.templates[t])
 
   const set = (fn: (d: GymTemplateDef) => void) =>
@@ -78,6 +80,9 @@ export function RoutineEditor({ t, onClose }: { t: GymTemplate; onClose: () => v
                       <button disabled={i === draft.items.length - 1} onClick={() => (set((d) => d.items.splice(i + 1, 0, ...d.items.splice(i, 1))), setOpen(i + 1))} aria-label="Bajar">
                         <IDown />
                       </button>
+                      <button onClick={() => setInfo(it.id)}>
+                        <IPlay /> Técnica
+                      </button>
                       <button onClick={() => setPicking({ index: i })}>
                         <ISwap /> Cambiar
                       </button>
@@ -111,6 +116,7 @@ export function RoutineEditor({ t, onClose }: { t: GymTemplate; onClose: () => v
         </div>
       </div>
 
+      {info && <ExerciseInfo id={info} onClose={() => setInfo(null)} />}
       {picking && (
         <ExercisePicker
           current={picking.index != null ? draft.items[picking.index].id : undefined}

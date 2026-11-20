@@ -20,7 +20,7 @@ PWA personal para organizar **basket, gimnasio y carrera** en una sola semana, c
 ## 2. Datos: dónde viven y qué sale del móvil
 
 - **Todo se guarda en el propio dispositivo** (`localStorage`, clave `entreno.v1`). No hay cuentas, servidor, analítica ni cookies de terceros.
-- **Nada sale del móvil.** La app no hace peticiones de red con tus datos; solo descarga su propio código.
+- **Nada sale del móvil.** La app no hace peticiones de red con tus datos; solo descarga su propio código y, cuando abres la ficha de un ejercicio, sus dos fotos de demostración (desde jsDelivr, sin datos tuyos).
 - **Ubicación:** solo se lee si guardas tu gimnasio y activas *Detectar al abrir la app*. Se consulta **una vez al abrir la app** (nunca en segundo plano) y se compara en el propio móvil con la ubicación guardada.
 - **Coach IA (opcional):** solo si lo conectas. La clave de Gemini se guarda aparte (`entreno.gemini.key`), nunca se exporta. Al escribirle, se envía a Google un resumen de tu perfil, la semana actual, las 3 últimas semanas, tus rutinas y tus últimos pesos. En el nivel gratuito Google puede usarlo para mejorar sus modelos.
 - **Copia de seguridad:** *Ajustes → Exportar* descarga un `.json` con todo; *Importar* lo restaura (sirve también para pasar los datos a otro móvil).
@@ -125,7 +125,18 @@ Con **2 días de gym** se hacen A y B, y B añade curl y tríceps (2 series cada
 
 Dentro de una sesión (menú ⋯ de cada ejercicio) puedes **cambiar** el ejercicio, **quitarlo** o **añadir** otro, eligiendo **solo hoy** (la sesión queda «personalizada» y conserva sus cambios aunque el plan la mueva de día) o **siempre** (se guarda en la rutina). También puedes subir o bajar las series de hoy.
 
-**Biblioteca:** ~55 ejercicios en 14 grupos (pliometría, pierna rodilla/cadera/unilateral, gemelo, pecho, hombro, espalda vertical/remo, bíceps, tríceps, core…). Al cambiar uno, primero salen las **alternativas del mismo grupo**. Puedes **crear ejercicios propios** (nombre, grupo, tipo de carga y rango de reps); el incremento se elige solo según el tipo.
+**Biblioteca:** 141 ejercicios en 16 grupos (pliometría, pierna rodilla/cadera/unilateral, aductores, gemelo, pecho, hombro empuje/lateral/posterior, espalda vertical/remo, bíceps, tríceps, core, trapecio y agarre), con versiones de barra, mancuerna, polea, máquina, multipower y peso corporal para casi todo. Al cambiar uno, primero salen las **alternativas del mismo grupo**. Puedes **crear ejercicios propios** (nombre, grupo, tipo de carga y rango de reps); el incremento se elige solo según el tipo.
+
+### Ficha de técnica
+
+Tocando el nombre de un ejercicio (en la sesión, en el buscador con ⓘ, o «Técnica» en el editor de rutinas) se abre su ficha:
+
+- **Demostración animada:** dos fotos (posición inicial y final) que se alternan con un fundido; toca para pausar. Con «reducir movimiento» activado en el iPhone no se anima y el toque cambia de foto. Las fotos son de [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (dominio público), en una versión fijada.
+- **Músculos, 3 pasos de técnica en español** y la indicación del ejercicio.
+- **Vídeo:** abre una búsqueda en YouTube del ejercicio.
+- **Ejercicios propios:** *Elegir imagen* busca en ~750 demostraciones de la misma base (los términos en español se traducen solos: «remo polea alta» → *high pulley row*) y puedes **pegar tu propio enlace de vídeo**.
+
+**Rendimiento:** nada de esto se carga al abrir la app. Los textos de técnica van en un módulo aparte (~7 KB) que se pide al abrir la primera ficha; cada foto pesa ~70 KB y solo se descarga al ver esa ficha; el índice de demostraciones (`public/demos.json`, ~11 KB comprimido) solo al usar *Elegir imagen*. El service worker guarda las fotos ya vistas (hasta 400, 6 meses), así que después funcionan sin conexión.
 
 Cada ejercicio guarda su propio historial: si cambias A por B y vuelves a A, A retoma donde lo dejaste.
 
@@ -232,12 +243,15 @@ npm run dev      # servidor local
 npm test         # tests del motor (planificación, reajustes, progresión)
 npm run build    # build de producción en dist/
 npm run icons    # regenerar iconos
+node scripts/demos.mjs  # regenerar el índice de demostraciones (public/demos.json)
 ```
 
 | Archivo | Qué contiene |
 |---|---|
 | `src/lib/engine.ts` | Motor: semanas, bloques, colocación, reajustes |
 | `src/lib/program.ts` | Ejercicios, plantillas, progresión de gym y carrera |
+| `src/lib/howto.ts` | Técnica de cada ejercicio y su demostración (carga diferida) |
+| `src/components/ExerciseInfo.tsx` | Ficha del ejercicio, animación y buscador de demostraciones |
 | `src/lib/store.ts` | Estado, persistencia y acciones |
 | `src/lib/coach.ts` | Coach IA: conexión con Gemini, contexto y herramientas |
 | `src/lib/geo.ts` | Distancias y ubicación |

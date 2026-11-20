@@ -372,6 +372,13 @@ export const actions = {
     return id
   },
 
+  /** Edita un ejercicio propio (nombre, demostración, vídeo…). */
+  updateExercise(id: string, patch: Partial<Omit<ExerciseDef, 'id' | 'custom'>>) {
+    update((d) => {
+      if (d.custom[id]) Object.assign(d.custom[id], patch)
+    }, false)
+  },
+
   deleteExercise(id: string) {
     update((d) => {
       delete d.custom[id]

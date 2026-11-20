@@ -5,7 +5,8 @@ import { BLOCK_LABEL, exDef, history, restFor } from '../lib/program'
 import { addDays, DAY_SHORT, fmtDay, todayIso, weekday, weekStart } from '../lib/dates'
 import { fmtNum, fmtPace, fmtTime, num, parseTime } from '../lib/format'
 import { KIND, accent } from '../components/SessionCard'
-import { ICheck, IClose, IMore, IPlus, ISwap, ITimer, ITrash } from '../components/Icons'
+import { ICheck, IClose, IInfo, IMore, IPlay, IPlus, ISwap, ITimer, ITrash } from '../components/Icons'
+import { ExerciseInfo } from '../components/ExerciseInfo'
 import { ExercisePicker, Popup, ScopePopup } from '../components/Pickers'
 
 export function SessionView({ id, onClose }: { id: string; onClose: () => void }) {
@@ -266,6 +267,7 @@ function GymBody({ s, onRest }: { s: Session; onRest: (sec: number) => void }) {
   const locked = s.status === 'skipped' || s.status === 'missed'
   const routine = s.template && s.template in st.templates ? st.templates[s.template as GymTemplate].title : undefined
   const [menu, setMenu] = useState<number | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [pending, setPending] = useState<Pending>(null)
 
   const setSet = (bi: number, li: number, patch: { kg?: number | null; reps?: number | null }) =>
@@ -310,6 +312,7 @@ function GymBody({ s, onRest }: { s: Session; onRest: (sec: number) => void }) {
           onSet={(li, p) => setSet(bi, li, p)}
           onToggle={(li) => toggle(bi, li)}
           onMenu={() => setMenu(bi)}
+          onInfo={() => setInfo(b.id)}
         />
       ))}
       {!locked && (
@@ -320,6 +323,19 @@ function GymBody({ s, onRest }: { s: Session; onRest: (sec: number) => void }) {
 
       {menu != null && blocks[menu] && (
         <Popup title={exDef(st, blocks[menu].id).name} onClose={() => setMenu(null)}>
+          <button
+            className="choice icon"
+            onClick={() => {
+              setInfo(blocks[menu].id)
+              setMenu(null)
+            }}
+          >
+            <IPlay />
+            <span>
+              <b>Ver técnica</b>
+              <span>Demostración, pasos y vídeo.</span>
+            </span>
+          </button>
           <button
             className="choice icon"
             onClick={() => {
@@ -360,6 +376,8 @@ function GymBody({ s, onRest }: { s: Session; onRest: (sec: number) => void }) {
           </button>
         </Popup>
       )}
+
+      {info && <ExerciseInfo id={info} onClose={() => setInfo(null)} />}
 
       {pending && (pending.kind === 'swap' || pending.kind === 'add') && !pending.newId && (
         <ExercisePicker
@@ -402,6 +420,7 @@ function Exercise({
   onSet,
   onToggle,
   onMenu,
+  onInfo,
 }: {
   s: Session
   b: ExerciseBlock
@@ -409,6 +428,7 @@ function Exercise({
   onSet: (li: number, p: { kg?: number | null; reps?: number | null }) => void
   onToggle: (li: number) => void
   onMenu: () => void
+  onInfo: () => void
 }) {
   const st = useStore()
   const def = exDef(st, b.id)
@@ -424,7 +444,10 @@ function Exercise({
     <div className={`ex ${allDone ? 'complete' : ''}`}>
       <div className="ex-head">
         <div className="ex-title">
-          <div className="ex-name">{def.name}</div>
+          <button className="ex-name ex-name-btn" onClick={onInfo} aria-label={`Técnica de ${def.name}`}>
+            <span>{def.name}</span>
+            <IInfo />
+          </button>
           <div className="ex-target">
             {target}
             {def.load === 'kg' && b.targetKg == null && <span className="tag-soft">elige peso</span>}

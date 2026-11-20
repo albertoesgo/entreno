@@ -8,6 +8,7 @@ export const GROUPS: Record<string, string> = {
   rodilla: 'Pierna · rodilla',
   cadera: 'Pierna · cadera',
   unilateral: 'Pierna · unilateral',
+  aductor: 'Aductores · abductores',
   gemelo: 'Gemelo',
   empuje_h: 'Pecho',
   empuje_v: 'Hombro · empuje',
@@ -18,12 +19,15 @@ export const GROUPS: Record<string, string> = {
   biceps: 'Bíceps',
   triceps: 'Tríceps',
   core: 'Core',
-  otro: 'Otros',
+  otro: 'Trapecio, agarre y otros',
 }
 
 const ex = (id: string, name: string, group: string, repMin: number, repMax: number, inc: number, load: Load, cue?: string): ExerciseDef => ({
   id, name, group, repMin, repMax, inc, load, cue,
 })
+
+const DB = 'Kg por mancuerna.'
+const BW = 'Kg = lastre (0 = peso corporal).'
 
 export const EXERCISES: Record<string, ExerciseDef> = Object.fromEntries(
   [
@@ -34,6 +38,12 @@ export const EXERCISES: Record<string, ExerciseDef> = Object.fromEntries(
     ex('singleleg', 'Saltos a una pierna', 'plio', 3, 3, 0, 'plyo', 'Por pierna. Aterriza estable.'),
     ex('depthjump', 'Drop jump', 'plio', 3, 3, 0, 'plyo', 'Cae de un cajón bajo y rebota rápido. Solo si ya dominas el salto al cajón.'),
     ex('pogo', 'Pogos', 'plio', 15, 15, 0, 'plyo', 'Contactos rápidos con tobillo rígido.'),
+    ex('tuckjump', 'Saltos con rodillas al pecho', 'plio', 5, 5, 0, 'plyo', 'Encadenados, rebote corto.'),
+    ex('lateralbound', 'Saltos laterales (skater)', 'plio', 4, 4, 0, 'plyo', 'Por lado. Aguanta 1" la caída.'),
+    ex('hurdlehops', 'Saltos de vallas', 'plio', 5, 5, 0, 'plyo', 'Vallas bajas, contacto mínimo entre saltos.'),
+    ex('splitjump', 'Saltos en zancada', 'plio', 4, 4, 0, 'plyo', 'Por pierna. Cambia de pierna en el aire.'),
+    ex('lateralbox', 'Salto lateral al cajón', 'plio', 3, 3, 0, 'plyo', 'Por lado.'),
+    ex('medball', 'Lanzamiento de balón medicinal', 'plio', 4, 4, 0, 'plyo', 'Desde sentadilla, lanza arriba y adelante con todo.'),
 
     ex('squat', 'Sentadilla trasera', 'rodilla', 5, 8, 5, 'kg', 'Deja 1–2 reps en reserva. Baja controlado, sube explosivo.'),
     ex('frontsquat', 'Sentadilla frontal', 'rodilla', 5, 8, 2.5, 'kg'),
@@ -41,59 +51,142 @@ export const EXERCISES: Record<string, ExerciseDef> = Object.fromEntries(
     ex('legpress', 'Prensa', 'rodilla', 8, 12, 10, 'kg', 'Pies a la anchura de hombros.'),
     ex('goblet', 'Sentadilla goblet', 'rodilla', 8, 12, 2, 'kg'),
     ex('legext', 'Extensión de cuádriceps', 'rodilla', 10, 15, 2.5, 'kg'),
+    ex('smithsquat', 'Sentadilla en multipower', 'rodilla', 6, 10, 5, 'kg'),
+    ex('boxsquat', 'Sentadilla al cajón', 'rodilla', 4, 6, 5, 'kg', 'Siéntate sin relajarte y sube explosivo.'),
+    ex('sissy', 'Sentadilla sissy', 'rodilla', 8, 15, 0, 'bw'),
 
     ex('rdl', 'Peso muerto rumano', 'cadera', 8, 10, 5, 'kg', 'Cadera atrás, espalda neutra.'),
     ex('trapbar', 'Peso muerto con barra hexagonal', 'cadera', 4, 6, 5, 'kg', 'Empuja el suelo, sube rápido.'),
+    ex('deadlift', 'Peso muerto convencional', 'cadera', 3, 6, 5, 'kg', 'Barra pegada a las piernas, espalda neutra.'),
+    ex('sumo', 'Peso muerto sumo', 'cadera', 4, 6, 5, 'kg'),
+    ex('dbrdl', 'Peso muerto rumano con mancuernas', 'cadera', 8, 12, 2, 'kg', DB),
     ex('hipthrust', 'Hip thrust', 'cadera', 8, 12, 5, 'kg', 'Pausa de 1" arriba.'),
-    ex('legcurl', 'Curl femoral', 'cadera', 10, 12, 2.5, 'kg'),
+    ex('glutebridge', 'Puente de glúteo con barra', 'cadera', 10, 15, 5, 'kg'),
+    ex('legcurl', 'Curl femoral tumbado', 'cadera', 10, 12, 2.5, 'kg'),
+    ex('seatedlegcurl', 'Curl femoral sentado', 'cadera', 10, 12, 2.5, 'kg'),
     ex('nordic', 'Curl nórdico', 'cadera', 4, 8, 0, 'bw', 'Baja lo más lento que puedas.'),
+    ex('ghr', 'Glute ham raise', 'cadera', 6, 10, 0, 'bw'),
+    ex('goodmorning', 'Buenos días con barra', 'cadera', 8, 10, 2.5, 'kg', 'Peso ligero, rodillas un poco flexionadas.'),
+    ex('hyperext', 'Hiperextensiones', 'cadera', 10, 15, 2.5, 'bw+', 'Kg = disco en el pecho (0 = sin peso).'),
+    ex('pullthrough', 'Pull-through en polea', 'cadera', 12, 15, 2.5, 'kg'),
+    ex('kbswing', 'Swing con kettlebell', 'cadera', 12, 20, 4, 'kg', 'Golpe de cadera, no de brazos.'),
+    ex('powerclean', 'Cargada de potencia', 'cadera', 2, 4, 2.5, 'kg', 'Técnica antes que peso. Muy buena para el salto.'),
+    ex('hangclean', 'Cargada colgante', 'cadera', 2, 4, 2.5, 'kg', 'Desde encima de la rodilla, extensión violenta de cadera.'),
 
     ex('bulgarian', 'Sentadilla búlgara', 'unilateral', 8, 10, 2, 'kg', 'Kg por mancuerna · reps por pierna.'),
     ex('lunge', 'Zancadas caminando', 'unilateral', 8, 12, 2, 'kg', 'Kg por mancuerna · reps por pierna.'),
+    ex('reverselunge', 'Zancada hacia atrás', 'unilateral', 8, 12, 2, 'kg', 'Kg por mancuerna · reps por pierna.'),
     ex('stepup', 'Step-up al cajón', 'unilateral', 8, 10, 2, 'kg', 'Kg por mancuerna · reps por pierna.'),
+    ex('slrdl', 'Peso muerto a una pierna', 'unilateral', 8, 10, 2, 'kg', 'Reps por pierna. Cadera cuadrada.'),
+    ex('smithsplit', 'Búlgara en multipower', 'unilateral', 8, 10, 5, 'kg', 'Reps por pierna.'),
+    ex('sidelunge', 'Zancada lateral', 'unilateral', 8, 10, 2, 'kg', 'Reps por lado.'),
+    ex('pistolbox', 'Sentadilla a una pierna al cajón', 'unilateral', 5, 8, 0, 'bw', 'Reps por pierna. Baja hasta rozar el cajón.'),
+
+    ex('adductor', 'Aductor en máquina', 'aductor', 12, 15, 5, 'kg'),
+    ex('abductor', 'Abductor en máquina', 'aductor', 12, 20, 5, 'kg'),
+    ex('cableadduct', 'Aducción en polea', 'aductor', 12, 15, 2.5, 'kg', 'Reps por pierna.'),
 
     ex('calf', 'Gemelo de pie', 'gemelo', 10, 15, 5, 'kg', 'Pausa de 1" arriba.'),
     ex('seatedcalf', 'Gemelo sentado', 'gemelo', 12, 20, 5, 'kg'),
+    ex('presscalf', 'Gemelo en prensa', 'gemelo', 12, 20, 10, 'kg'),
+    ex('slcalf', 'Gemelo a una pierna con mancuerna', 'gemelo', 10, 15, 2, 'kg', 'Reps por pierna.'),
 
     ex('bench', 'Press banca', 'empuje_h', 6, 8, 2.5, 'kg', 'Deja 1–2 reps en reserva.'),
-    ex('dbbench', 'Press banca con mancuernas', 'empuje_h', 6, 10, 2, 'kg', 'Kg por mancuerna.'),
-    ex('incline', 'Press inclinado con mancuernas', 'empuje_h', 8, 12, 2, 'kg', 'Kg por mancuerna.'),
+    ex('dbbench', 'Press banca con mancuernas', 'empuje_h', 6, 10, 2, 'kg', DB),
+    ex('incline', 'Press inclinado con mancuernas', 'empuje_h', 8, 12, 2, 'kg', DB),
+    ex('inclinebench', 'Press inclinado con barra', 'empuje_h', 6, 10, 2.5, 'kg'),
+    ex('smithincline', 'Press inclinado en multipower', 'empuje_h', 8, 12, 2.5, 'kg'),
+    ex('declinebench', 'Press declinado', 'empuje_h', 6, 10, 2.5, 'kg'),
     ex('machinepress', 'Press de pecho en máquina', 'empuje_h', 8, 12, 5, 'kg'),
-    ex('dips', 'Fondos', 'empuje_h', 6, 12, 2.5, 'bw+', 'Kg = lastre (0 = peso corporal).'),
+    ex('inclinemachine', 'Press inclinado en máquina', 'empuje_h', 8, 12, 5, 'kg'),
+    ex('dips', 'Fondos', 'empuje_h', 6, 12, 2.5, 'bw+', BW),
+    ex('pushup', 'Flexiones', 'empuje_h', 10, 25, 0, 'bw'),
     ex('cablefly', 'Aperturas en polea', 'empuje_h', 12, 15, 2.5, 'kg'),
+    ex('lowcablefly', 'Aperturas en polea baja', 'empuje_h', 12, 15, 2.5, 'kg', 'Hacia arriba: pecho superior.'),
+    ex('dbfly', 'Aperturas con mancuernas', 'empuje_h', 10, 15, 1, 'kg', DB),
+    ex('pecdeck', 'Contractor de pecho (pec deck)', 'empuje_h', 12, 15, 5, 'kg'),
 
-    ex('ohp', 'Press militar con mancuernas', 'empuje_v', 8, 10, 2, 'kg', 'Kg por mancuerna.'),
+    ex('ohp', 'Press militar con mancuernas', 'empuje_v', 8, 10, 2, 'kg', DB),
     ex('barbellohp', 'Press militar con barra', 'empuje_v', 5, 8, 2.5, 'kg'),
+    ex('arnold', 'Press Arnold', 'empuje_v', 8, 12, 2, 'kg', DB),
+    ex('machineohp', 'Press de hombro en máquina', 'empuje_v', 8, 12, 5, 'kg'),
+    ex('smithohp', 'Press militar en multipower', 'empuje_v', 6, 10, 2.5, 'kg'),
+    ex('pushpress', 'Push press', 'empuje_v', 3, 6, 2.5, 'kg', 'Impulso de piernas y bloqueo arriba.'),
     ex('landmine', 'Landmine press', 'empuje_v', 8, 12, 2.5, 'kg', 'Reps por brazo.'),
+    ex('frontraise', 'Elevaciones frontales', 'empuje_v', 10, 15, 1, 'kg', DB),
 
-    ex('pullup', 'Dominadas', 'tiron_v', 6, 10, 2.5, 'bw+', 'Kg = lastre (0 = peso corporal).'),
-    ex('chinup', 'Dominadas supinas', 'tiron_v', 6, 10, 2.5, 'bw+', 'Kg = lastre (0 = peso corporal).'),
+    ex('pullup', 'Dominadas', 'tiron_v', 6, 10, 2.5, 'bw+', BW),
+    ex('chinup', 'Dominadas supinas', 'tiron_v', 6, 10, 2.5, 'bw+', BW),
+    ex('assistpull', 'Dominadas asistidas', 'tiron_v', 6, 12, 0, 'bw', 'Con goma o máquina. Menos ayuda cuando completes el rango.'),
     ex('latpull', 'Jalón al pecho', 'tiron_v', 8, 12, 2.5, 'kg'),
+    ex('closepull', 'Jalón con agarre estrecho', 'tiron_v', 8, 12, 2.5, 'kg'),
+    ex('onearmpull', 'Jalón a una mano', 'tiron_v', 10, 12, 2.5, 'kg', 'Reps por brazo.'),
+    ex('straightarm', 'Pullover en polea', 'tiron_v', 12, 15, 2.5, 'kg', 'Brazos casi rectos, lleva la barra a los muslos.'),
+    ex('dbpullover', 'Pullover con mancuerna', 'tiron_v', 10, 12, 2, 'kg'),
 
     ex('row', 'Remo con barra', 'tiron_h', 8, 10, 2.5, 'kg'),
     ex('cablerow', 'Remo en polea baja', 'tiron_h', 10, 12, 2.5, 'kg'),
     ex('dbrow', 'Remo con mancuerna', 'tiron_h', 8, 12, 2, 'kg', 'Reps por brazo.'),
     ex('chestrow', 'Remo con pecho apoyado', 'tiron_h', 8, 12, 2, 'kg'),
+    ex('tbarrow', 'Remo en T', 'tiron_h', 8, 10, 2.5, 'kg'),
+    ex('machinerow', 'Remo en máquina', 'tiron_h', 10, 12, 5, 'kg'),
+    ex('highrow', 'Remo alto en máquina', 'tiron_h', 10, 12, 5, 'kg'),
+    ex('meadows', 'Remo Meadows', 'tiron_h', 8, 12, 2.5, 'kg', 'Reps por brazo.'),
+    ex('onearmcablerow', 'Remo en polea a una mano', 'tiron_h', 10, 12, 2.5, 'kg', 'Reps por brazo.'),
+    ex('invrow', 'Remo invertido', 'tiron_h', 8, 15, 0, 'bw', 'Cuerpo recto; más difícil cuanto más horizontal.'),
 
     ex('lateral', 'Elevaciones laterales', 'lateral', 12, 20, 1, 'kg', 'Kg por mancuerna. Controla la bajada.'),
     ex('cablelateral', 'Laterales en polea', 'lateral', 12, 20, 1.25, 'kg', 'Reps por brazo.'),
+    ex('seatedlateral', 'Laterales sentado', 'lateral', 12, 20, 1, 'kg', DB),
+    ex('leanlateral', 'Lateral inclinado a una mano', 'lateral', 12, 15, 1, 'kg', 'Reps por brazo.'),
+    ex('uprightrow', 'Remo al mentón', 'lateral', 10, 15, 2.5, 'kg', 'Agarre ancho, codos hasta la altura del hombro.'),
 
     ex('facepull', 'Face pull', 'posterior', 15, 20, 2.5, 'kg'),
     ex('reardelt', 'Pájaros', 'posterior', 12, 20, 1, 'kg'),
+    ex('reversepec', 'Pájaros en máquina', 'posterior', 12, 20, 5, 'kg'),
+    ex('cablerear', 'Pájaros en polea', 'posterior', 12, 20, 1.25, 'kg'),
+    ex('bandpull', 'Band pull-apart', 'posterior', 15, 25, 0, 'bw', 'Con goma. Junta escápulas.'),
 
-    ex('curl', 'Curl inclinado', 'biceps', 10, 12, 1, 'kg', 'Kg por mancuerna.'),
+    ex('curl', 'Curl inclinado', 'biceps', 10, 12, 1, 'kg', DB),
+    ex('dbcurl', 'Curl con mancuernas', 'biceps', 8, 12, 1, 'kg', DB),
     ex('barbellcurl', 'Curl con barra', 'biceps', 8, 12, 2.5, 'kg'),
-    ex('hammer', 'Curl martillo', 'biceps', 10, 12, 1, 'kg', 'Kg por mancuerna.'),
+    ex('ezcurl', 'Curl con barra Z', 'biceps', 8, 12, 2.5, 'kg'),
+    ex('hammer', 'Curl martillo', 'biceps', 10, 12, 1, 'kg', DB),
+    ex('ropehammer', 'Martillo en polea con cuerda', 'biceps', 10, 15, 2.5, 'kg'),
     ex('preacher', 'Curl predicador', 'biceps', 10, 12, 2.5, 'kg'),
+    ex('machinecurl', 'Curl en máquina', 'biceps', 10, 12, 2.5, 'kg'),
+    ex('cablecurl', 'Curl en polea', 'biceps', 10, 15, 2.5, 'kg'),
+    ex('spider', 'Spider curl', 'biceps', 10, 12, 2.5, 'kg'),
+    ex('concentration', 'Curl concentrado', 'biceps', 10, 12, 1, 'kg', 'Reps por brazo.'),
+    ex('reversecurl', 'Curl invertido', 'biceps', 10, 15, 2.5, 'kg', 'Agarre prono: antebrazo y braquial.'),
 
     ex('triceps', 'Extensión de tríceps en polea', 'triceps', 10, 12, 2.5, 'kg'),
+    ex('ropepush', 'Extensión con cuerda en polea', 'triceps', 10, 15, 2.5, 'kg', 'Abre la cuerda abajo.'),
     ex('skullcrusher', 'Press francés', 'triceps', 8, 12, 2.5, 'kg'),
     ex('overheadext', 'Extensión sobre la cabeza en polea', 'triceps', 10, 15, 2.5, 'kg'),
+    ex('dboverhead', 'Extensión tras nuca con mancuerna', 'triceps', 10, 12, 2, 'kg'),
+    ex('closebench', 'Press banca agarre cerrado', 'triceps', 6, 10, 2.5, 'kg'),
+    ex('kickback', 'Patada de tríceps', 'triceps', 12, 15, 1, 'kg', 'Reps por brazo.'),
+    ex('benchdip', 'Fondos en banco', 'triceps', 10, 20, 0, 'bw'),
+    ex('dipmachine', 'Fondos en máquina', 'triceps', 10, 12, 5, 'kg'),
 
     ex('pallof', 'Pallof press', 'core', 10, 12, 2.5, 'kg', 'Reps por lado.'),
     ex('legraise', 'Elevación de piernas colgado', 'core', 10, 15, 0, 'bw'),
+    ex('kneeraise', 'Elevación de rodillas en paralelas', 'core', 10, 15, 0, 'bw'),
     ex('abwheel', 'Rueda abdominal', 'core', 8, 12, 0, 'bw'),
     ex('cablecrunch', 'Crunch en polea', 'core', 10, 15, 2.5, 'kg'),
+    ex('machinecrunch', 'Crunch en máquina', 'core', 10, 15, 5, 'kg'),
+    ex('reversecrunch', 'Crunch inverso', 'core', 10, 15, 0, 'bw'),
+    ex('plank', 'Plancha', 'core', 30, 60, 0, 'bw', 'Reps = segundos.'),
+    ex('sideplank', 'Plancha lateral', 'core', 20, 45, 0, 'bw', 'Reps = segundos por lado.'),
+    ex('deadbug', 'Dead bug', 'core', 8, 12, 0, 'bw', 'Reps por lado. Lumbar pegada al suelo.'),
+    ex('woodchop', 'Leñador en polea', 'core', 10, 12, 2.5, 'kg', 'Reps por lado. Gira desde la cadera.'),
+    ex('russian', 'Giro ruso', 'core', 10, 20, 0, 'bw', 'Reps por lado.'),
+
+    ex('farmer', 'Paseo del granjero', 'otro', 20, 40, 2, 'kg', 'Kg por mano · reps = pasos.'),
+    ex('shrug', 'Encogimientos con mancuernas', 'otro', 10, 15, 2, 'kg', DB),
+    ex('barbellshrug', 'Encogimientos con barra', 'otro', 10, 15, 5, 'kg'),
+    ex('wristcurl', 'Curl de muñeca', 'otro', 12, 20, 1, 'kg'),
   ].map((e) => [e.id, e]),
 )
 
@@ -265,7 +358,7 @@ export const gymMinutes = (blocks: ExerciseBlock[]) => 10 + Math.round(blocks.re
 export function restFor(def: ExerciseDef, repMax: number): number {
   if (def.load === 'plyo') return 90
   if (repMax <= 8) return 150
-  if (def.group === 'lateral' || def.group === 'posterior' || def.group === 'biceps' || def.group === 'triceps' || def.group === 'core') return 60
+  if (def.group === 'aductor' || def.group === 'lateral' || def.group === 'posterior' || def.group === 'biceps' || def.group === 'triceps' || def.group === 'core') return 60
   return 90
 }
 

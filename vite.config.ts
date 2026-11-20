@@ -26,6 +26,25 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
+      workbox: {
+        runtimeCaching: [
+          {
+            // Fotos de las demostraciones: se guardan al verlas y luego funcionan sin conexión
+            urlPattern: ({ url }) => url.hostname === 'cdn.jsdelivr.net' && url.pathname.includes('/free-exercise-db@'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'demos',
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.endsWith('/demos.json'),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'demos-index' },
+          },
+        ],
+      },
     }),
   ],
   server: { host: true },

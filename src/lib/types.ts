@@ -112,6 +112,8 @@ export interface ExerciseDef {
   load: Load
   cue?: string
   custom?: boolean
+  demo?: string // carpeta en free-exercise-db (solo ejercicios propios)
+  video?: string // enlace propio a un vídeo (solo ejercicios propios)
 }
 
 export interface TemplateItem {

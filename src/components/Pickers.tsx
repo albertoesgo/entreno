@@ -2,12 +2,13 @@ import { useMemo, useState, type ReactNode } from 'react'
 import type { ExerciseDef, Load } from '../lib/types'
 import { actions, useStore } from '../lib/store'
 import { GROUPS, allExercises, exDef } from '../lib/program'
-import { IClose, IPlus, ISearch } from './Icons'
+import { IClose, IInfo, IPlus, ISearch } from './Icons'
+import { ExerciseInfo } from './ExerciseInfo'
 
 /** Hoja inferior genérica. */
-export function Popup({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Popup({ title, onClose, children, top }: { title: string; onClose: () => void; children: ReactNode; top?: boolean }) {
   return (
-    <div className="overlay" onClick={onClose}>
+    <div className={`overlay ${top ? 'top' : ''}`} onClick={onClose}>
       <div className="popup" onClick={(e) => e.stopPropagation()}>
         <div className="popup-head">
           <h3>{title}</h3>
@@ -61,6 +62,7 @@ export function ExercisePicker({ current, title, onPick, onClose }: { current?: 
   const st = useStore()
   const [q, setQ] = useState('')
   const [creating, setCreating] = useState(false)
+  const [info, setInfo] = useState<string | null>(null)
   const group = current ? exDef(st, current).group : null
 
   const lists = useMemo(() => {
@@ -97,7 +99,7 @@ export function ExercisePicker({ current, title, onPick, onClose }: { current?: 
             <div className="section-title">Alternativas · {GROUPS[group!]}</div>
             <div className="list">
               {lists.alts.map((e) => (
-                <ExRow key={e.id} e={e} onPick={onPick} />
+                <ExRow key={e.id} e={e} onPick={onPick} onInfo={setInfo} />
               ))}
             </div>
           </div>
@@ -109,30 +111,36 @@ export function ExercisePicker({ current, title, onPick, onClose }: { current?: 
               <div className="section-title">{label}</div>
               <div className="list">
                 {lists.byGroup[g].map((e) => (
-                  <ExRow key={e.id} e={e} onPick={onPick} />
+                  <ExRow key={e.id} e={e} onPick={onPick} onInfo={setInfo} />
                 ))}
               </div>
             </div>
           ))}
       </div>
+      {info && <ExerciseInfo id={info} onClose={() => setInfo(null)} />}
     </div>
   )
 }
 
 const LOAD_LABEL: Record<Load, string> = { kg: 'Con peso', 'bw+': 'Peso corporal + lastre', bw: 'Peso corporal', plyo: 'Salto' }
 
-function ExRow({ e, onPick }: { e: ExerciseDef; onPick: (id: string) => void }) {
+function ExRow({ e, onPick, onInfo }: { e: ExerciseDef; onPick: (id: string) => void; onInfo: (id: string) => void }) {
   return (
-    <button className="list-row" onClick={() => onPick(e.id)}>
-      <span className="grow">
-        <b>{e.name}</b>
-        <small>
-          {e.load === 'plyo' ? 'Salto · sin peso' : `${e.repMin}–${e.repMax} reps · ${LOAD_LABEL[e.load]}`}
-          {e.custom ? ' · tuyo' : ''}
-        </small>
-      </span>
-      <IPlus />
-    </button>
+    <div className="list-pair">
+      <button className="list-row" onClick={() => onPick(e.id)}>
+        <span className="grow">
+          <b>{e.name}</b>
+          <small>
+            {e.load === 'plyo' ? 'Salto · sin peso' : `${e.repMin}–${e.repMax} reps · ${LOAD_LABEL[e.load]}`}
+            {e.custom ? ' · tuyo' : ''}
+          </small>
+        </span>
+        <IPlus />
+      </button>
+      <button className="info-btn" onClick={() => onInfo(e.id)} aria-label={`Técnica de ${e.name}`}>
+        <IInfo />
+      </button>
+    </div>
   )
 }
 

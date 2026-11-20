@@ -164,6 +164,7 @@ h1 { font-size: 34px; font-weight: 700; letter-spacing: -.025em; line-height: 1.
   background: var(--tx); color: var(--bg); width: 100%; text-align: center; line-height: 1.2;
   transition: transform .12s var(--ease), opacity .12s;
 }
+a.btn { text-decoration: none; }
 .btn:active:not(:disabled) { transform: scale(.98); }
 .btn.ghost { background: var(--s2); color: var(--tx); }
 .btn.line { background: transparent; border: 1px solid var(--line); color: var(--tx); }
@@ -442,3 +443,48 @@ details[open] summary::after { content: '–'; }
 .nav button.on { color: var(--tx); }
 .nav svg { width: 24px; height: 24px; }
 .nav button:nth-child(3).on svg { color: var(--gym); }
+
+/* ── Ficha de ejercicio ─────────────────────── */
+.overlay.top { z-index: 80; }
+.sheet.picker.top { z-index: 90; }
+.tiny { font-size: 11.5px; line-height: 1.4; }
+.info-meta { margin-top: -6px; }
+.popup .inline-add { margin-top: 0; }
+.info-cue { margin: 0; }
+.demo-wrap { display: grid; gap: 6px; justify-items: center; }
+.demo {
+  position: relative; display: block; width: 100%; aspect-ratio: 850 / 567; border-radius: 18px; overflow: hidden;
+  background: #fff; padding: 0; border: 0;
+}
+.demo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .35s ease; filter: brightness(.95); }
+.demo.ready img.a { opacity: 1; }
+.demo.ready img.b { animation: demo-flip 2.6s ease-in-out infinite; }
+.demo.paused img.b { animation-play-state: paused; }
+@keyframes demo-flip { 0%, 34% { opacity: 0; } 50%, 84% { opacity: 1; } 100% { opacity: 0; } }
+.demo.loading { background: linear-gradient(90deg, var(--s2) 20%, var(--s3) 50%, var(--s2) 80%) 0 0 / 200% 100%; animation: shimmer 1.2s linear infinite; }
+.demo.loading img { opacity: 0 !important; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.demo-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; text-align: center; color: var(--mut); background: var(--s2); }
+.demo-empty { padding: 18px; border-radius: 16px; background: var(--s2); text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  .demo.ready img.b { animation: none; opacity: 0; }
+  .demo.ready.paused img.b { opacity: 1; }
+  .demo.loading { animation: none; }
+}
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: st; display: grid; gap: 10px; }
+.steps li { counter-increment: st; display: grid; grid-template-columns: 24px 1fr; gap: 10px; font-size: 15px; line-height: 1.45; }
+.steps li::before {
+  content: counter(st); width: 24px; height: 24px; border-radius: 99px; display: grid; place-items: center;
+  background: color-mix(in oklab, var(--gym) 22%, var(--s2)); color: var(--gym); font-size: 12px; font-weight: 700;
+}
+.info-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.info-actions .btn { flex: 1; min-width: 140px; gap: 8px; }
+.demo-row { display: grid; gap: 0; }
+.demo-row.open .list-row { border-radius: 14px 14px 0 0; background: var(--s2); }
+.demo-row-body { display: grid; gap: 10px; padding: 12px; background: var(--s2); border-radius: 0 0 14px 14px; }
+.ex-name-btn { display: inline-flex; align-items: flex-start; gap: 6px; text-align: left; padding: 0; background: none; color: inherit; }
+.ex-name-btn svg { width: 17px; height: 17px; color: var(--dim); flex-shrink: 0; margin-top: 2px; }
+.list-pair { display: flex; gap: 6px; align-items: stretch; }
+.list-pair .list-row { flex: 1; min-width: 0; }
+.list-pair .info-btn { width: 48px; flex-shrink: 0; border-radius: 14px; background: var(--s1); display: grid; place-items: center; color: var(--mut); }
+.list-pair .info-btn svg { width: 20px; height: 20px; }

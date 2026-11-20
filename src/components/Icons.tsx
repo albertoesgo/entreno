@@ -111,3 +111,15 @@ export const ITrash = () => (
     <path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13" />
   </Svg>
 )
+export const IPlay = () => (
+  <Svg>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M10.5 9.2v5.6l4.4-2.8z" fill="currentColor" />
+  </Svg>
+)
+export const IInfo = () => (
+  <Svg>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5.5M12 7.8v.2" />
+  </Svg>
+)
